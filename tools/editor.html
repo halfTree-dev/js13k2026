@@ -1,0 +1,1102 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<title>低多边形精灵编辑器</title>
+<style>
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body { margin: 0; display: flex; font: 13px/1.45 system-ui, "Microsoft YaHei", sans-serif; background: #1e1f22; color: #d7d9dd; }
+    #toolbar, #rightbar { width: 240px; flex: none; padding: 10px 0; overflow-y: auto; }
+    #toolbar { border-right: 1px solid #3a3d44; }
+    #rightbar { border-left: 1px solid #3a3d44; }
+    #toolbar h1 { font-size: 14px; margin: 0 0 8px; padding: 0 12px; }
+    section { border-top: 1px solid #3a3d44; padding: 8px 0; }
+    h2 { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #9aa0aa; margin: 0 0 6px; padding: 0 12px; }
+    .toolRow { display: flex; }
+    .toolRow button { flex: 1; padding: 3px 0; }
+    button { font: inherit; font-size: 12px; background: #2b2d31; color: #d7d9dd; border: 1px solid #4a4e57; border-radius: 0; padding: 3px 8px; cursor: pointer; }
+    button:hover { background: #35383e; }
+    button.active { background: #3d63c8; border-color: #5a7de0; color: #fff; }
+    button.mini { padding: 0 5px; font-size: 11px; line-height: 18px; }
+    .fullBtn { display: block; width: 100%; margin-top: 6px; }
+    .toolRow button + button, .btnRow button + button { border-left: none; }
+    .hint { color: #9aa0aa; font-size: 12px; min-height: 34px; margin-top: 6px; padding: 0 12px; }
+    #swatches { display: flex; }
+    #swatches input[type=color] { flex: 1; height: 22px; padding: 0; border: none; border-top: 1px solid #4a4e57; border-bottom: 1px solid #4a4e57; border-radius: 0; background: none; cursor: pointer; }
+    #bgRow { display: flex; }
+    #bgRow input[type=color] { flex: 1; height: 26px; padding: 0; border: none; border-top: 1px solid #4a4e57; border-bottom: 1px solid #4a4e57; border-radius: 0; background: none; cursor: pointer; }
+    #shadeLabel, #bgLabel { color: #9aa0aa; font-size: 12px; margin-top: 2px; padding: 0 12px; }
+    label.chk { display: block; margin: 2px 0; padding: 0 12px; }
+    input[type=text] { width: 100%; font: inherit; background: #2b2d31; color: #d7d9dd; border: 1px solid #4a4e57; border-left: none; border-right: none; border-radius: 0; padding: 3px 6px; }
+    input[type=range] { width: 100%; }
+    #triList { max-height: 220px; overflow-y: auto; border: 1px solid #3a3d44; border-left: none; border-right: none; }
+    .triRow { display: flex; align-items: center; gap: 4px; padding: 2px 4px; cursor: pointer; border-bottom: 1px solid #2b2d31; }
+    .triRow:hover { background: #2b2d31; }
+    .triRow.selected { background: #383524; outline: 1px solid #ffd54a; }
+    .triLabel { flex: 1; font-size: 11px; font-family: Consolas, monospace; }
+    .triShade { font-size: 10px; padding: 0 4px; color: #222; }
+    .btnRow { display: flex; margin: 6px 0; }
+    .btnRow button { flex: 1; }
+    textarea { width: 100%; height: 110px; font: 11px Consolas, monospace; background: #2b2d31; color: #d7d9dd; border: 1px solid #4a4e57; border-left: none; border-right: none; border-radius: 0; padding: 4px 6px; resize: vertical; }
+    #status { min-height: 18px; color: #ffd54a; font-size: 12px; padding: 6px 12px 0; }
+    #canvasWrap { flex: 1; position: relative; }
+    #editor { position: absolute; inset: 0; display: block; }
+</style>
+</head>
+<body>
+<div id="toolbar">
+    <h1>低多边形精灵编辑器</h1>
+
+    <section>
+        <h2>工具（1-4 切换）</h2>
+        <div class="toolRow">
+            <button data-tool="select" class="active">选择</button>
+            <button data-tool="point">点</button>
+            <button data-tool="triangle">三角形</button>
+            <button data-tool="shade">调光</button>
+        </div>
+        <div id="toolHint" class="hint"></div>
+    </section>
+
+    <section>
+        <h2>三角形 <span id="triCount"></span></h2>
+        <div id="triList"></div>
+    </section>
+
+    <section>
+        <h2>导出 / 导入</h2>
+        <input type="text" id="spriteName" value="UNICORN" spellcheck="false">
+        <div class="btnRow">
+            <button id="btnExport">导出到文本</button>
+            <button id="btnImport">从文本导入</button>
+            <button id="btnClear">清空</button>
+        </div>
+        <textarea id="ioText" spellcheck="false" placeholder="导出结果在此显示；导入时把 sprite.ts 中的常量整段粘贴到这里"></textarea>
+    </section>
+
+    <div id="status"></div>
+</div>
+<div id="canvasWrap"><canvas id="editor"></canvas></div>
+<div id="rightbar">
+    <section>
+        <h2>调光</h2>
+        <div id="swatches"></div>
+        <input type="range" id="shadeSlider" min="0" max="5" step="1" value="1">
+        <div id="shadeLabel">S1 · #efefef</div>
+        <button id="btnResetPalette" class="fullBtn">恢复默认色板</button>
+    </section>
+
+    <section>
+        <h2>背景</h2>
+        <div id="bgRow"><input type="color" id="bgColor" value="#2f3136"></div>
+        <div id="bgLabel">#2f3136</div>
+        <button id="btnResetBg" class="fullBtn">恢复默认背景</button>
+    </section>
+
+    <section>
+        <h2>显示</h2>
+        <label class="chk"><input type="checkbox" id="toggleGrid" checked> 网格</label>
+        <label class="chk"><input type="checkbox" id="toggleIndices" checked> 点编号</label>
+        <label class="chk"><input type="checkbox" id="toggleFill" checked> 填充面片（关闭看线框）</label>
+    </section>
+</div>
+
+<script>
+'use strict';
+
+// ===== 常量 =====
+const DEFAULT_PALETTE = ['#ffffff', '#efefef', '#dadada', '#bdbdbd', '#949494', '#737373'];
+const DEFAULT_BG = '#2f3136';
+const STORAGE_KEY = 'polyEditorState';
+
+function isHexColor(s) {
+    return typeof s === 'string' && /^#[0-9a-fA-F]{6}$/.test(s);
+}
+
+// 默认工程：与 src/sprite.ts 的 UNICORN 完全一致
+const DEFAULT_UNICORN = {
+    pts: [
+        32, -62, 43, -59, 58, -52, 52, -46, 36, -45, 27, -47,
+        37, -60, 42, -59, 50, -82,
+        28, -58, 25, -72,
+        13, -56, 15, -44, 0, -44,
+        -3, -47, -28, -44, -32, -24, -15, -22, 3, -22, 19, -26,
+        -30, -34, -22, -34, -23, 0, -31, 0,
+        -18, -36, -9, -36, -11, 0, -20, 0,
+        9, -32, 17, -32, 20, 0, 12, 0,
+        17, -34, 24, -34, 30, 0, 22, 0,
+        -46, -30, -38, -28, -44, -6,
+    ],
+    tris: [
+        15, 36, 37, 37, 36, 38,
+        20, 21, 22, 20, 22, 23,
+        28, 29, 30, 28, 30, 31,
+        15, 14, 17, 15, 17, 16,
+        14, 12, 19, 14, 19, 18,
+        13, 12, 5, 13, 5, 11,
+        24, 25, 26, 24, 26, 27,
+        32, 33, 34, 32, 34, 35,
+        0, 11, 5,
+        0, 1, 2, 0, 2, 3, 0, 3, 4, 0, 4, 5,
+        6, 7, 8,
+        9, 0, 10,
+    ],
+    shades: [
+        4, 5,
+        4, 5, 4, 5,
+        1, 2, 0, 2,
+        2, 3,
+        3, 4, 3, 4,
+        3,
+        0, 1, 2, 3,
+        0,
+        1,
+    ],
+};
+
+const HINTS = {
+    select: '拖动顶点调整外形；点击三角形选中后可用滑杆调光；Delete 删除选中项；右键删除悬停元素',
+    point: '点击空白处放置顶点（自动吸附整数格点）',
+    triangle: '依次点击 3 个已有顶点构成三角形；Esc 取消半途选择',
+    shade: '点击三角形选中后用滑杆调光；悬停三角形时滚轮直接调光',
+};
+
+// ===== 状态 =====
+let points = [];     // {x, y} 顶点表
+let triangles = [];  // {a, b, c, shade} 三角形表
+let undoStack = [];
+
+let tool = 'select';
+let hoverPoint = -1;
+let hoverTriangle = -1;
+let selectedPoint = -1;
+let selectedTriangle = -1;
+let draft = [];          // 三角形工具的半成品顶点
+let dragging = false;
+let dragMoved = false;
+let dragIndex = -1;
+let sliderGesture = false;
+let spaceDown = false;
+let panning = false;
+let panStart = null;
+let mouseX = 0;
+let mouseY = 0;
+let mouseInside = false;
+let view = { ox: 400, oy: 500, zoom: 10 };
+let showGrid = true;
+let showIndices = true;
+let showFill = true;
+// 可自定义的调色板与背景色（供美术调试）
+let palette = DEFAULT_PALETTE.slice();
+let bgColor = DEFAULT_BG;
+
+// ===== DOM =====
+const wrap = document.getElementById('canvasWrap');
+const canvas = document.getElementById('editor');
+const ctx = canvas.getContext('2d');
+const toolHint = document.getElementById('toolHint');
+const swatches = document.getElementById('swatches');
+const shadeSlider = document.getElementById('shadeSlider');
+const shadeLabel = document.getElementById('shadeLabel');
+const triList = document.getElementById('triList');
+const triCount = document.getElementById('triCount');
+const spriteName = document.getElementById('spriteName');
+const ioText = document.getElementById('ioText');
+const bgColorInput = document.getElementById('bgColor');
+const bgLabel = document.getElementById('bgLabel');
+const statusEl = document.getElementById('status');
+const toolButtons = document.querySelectorAll('button[data-tool]');
+
+// ===== 画布与坐标变换 =====
+let dpr = 1;
+
+function resizeCanvas() {
+    dpr = window.devicePixelRatio || 1;
+    canvas.width = Math.round(wrap.clientWidth * dpr);
+    canvas.height = Math.round(wrap.clientHeight * dpr);
+    canvas.style.width = wrap.clientWidth + 'px';
+    canvas.style.height = wrap.clientHeight + 'px';
+    requestAnimationFrame(render);
+}
+
+function toScreenX(wx) { return view.ox + wx * view.zoom; }
+function toScreenY(wy) { return view.oy + wy * view.zoom; }
+function toWorldX(sx) { return (sx - view.ox) / view.zoom; }
+function toWorldY(sy) { return (sy - view.oy) / view.zoom; }
+function snapWorldX(sx) { return Math.round(toWorldX(sx)); }
+function snapWorldY(sy) { return Math.round(toWorldY(sy)); }
+
+function clampShade(v) { return Math.max(0, Math.min(5, Math.round(v))); }
+
+// ===== 撤销与持久化 =====
+function pushUndo() {
+    undoStack.push(JSON.stringify({ points, triangles }));
+    if (undoStack.length > 100) undoStack.shift();
+}
+
+function undo() {
+    if (undoStack.length === 0) { setStatus('没有可撤销的操作'); return; }
+    const snapshot = JSON.parse(undoStack.pop());
+    points = snapshot.points;
+    triangles = snapshot.triangles;
+    selectedPoint = -1;
+    selectedTriangle = -1;
+    draft = [];
+    refreshTriList();
+    save();
+    render();
+    setStatus('已撤销');
+}
+
+function save() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ points, triangles, palette, bg: bgColor }));
+}
+
+function load() {
+    try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return false;
+        const data = JSON.parse(raw);
+        if (!Array.isArray(data.points) || !Array.isArray(data.triangles)) return false;
+        const pts = data.points
+            .filter(p => p && Number.isFinite(p.x) && Number.isFinite(p.y))
+            .map(p => ({ x: Math.round(p.x), y: Math.round(p.y) }));
+        const tris = [];
+        for (const t of data.triangles) {
+            if (!t || ![t.a, t.b, t.c].every(v => Number.isInteger(v) && v >= 0 && v < pts.length)) continue;
+            if (t.a === t.b || t.b === t.c || t.a === t.c) continue;
+            tris.push({ a: t.a, b: t.b, c: t.c, shade: clampShade(t.shade !== undefined ? t.shade : 1) });
+        }
+        points = pts;
+        triangles = tris;
+        // 恢复自定义色板与背景（旧存档缺失时保持默认值）
+        if (Array.isArray(data.palette)) {
+            for (let i = 0; i < DEFAULT_PALETTE.length; i++) {
+                if (isHexColor(data.palette[i])) palette[i] = data.palette[i];
+            }
+        }
+        if (isHexColor(data.bg)) bgColor = data.bg;
+        return true;
+    } catch (err) {
+        return false;
+    }
+}
+
+// ===== 渲染 =====
+function render() {
+    const w = canvas.width / dpr;
+    const h = canvas.height / dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.fillStyle = bgColor;
+    ctx.fillRect(0, 0, w, h);
+    if (showGrid) drawGrid(w, h);
+    if (triangles.length > 0) {
+        if (showFill) drawFacets();
+        else drawWireframe();
+    }
+    drawOverlays(w, h);
+}
+
+function trianglePath(t) {
+    ctx.beginPath();
+    ctx.moveTo(toScreenX(points[t.a].x), toScreenY(points[t.a].y));
+    ctx.lineTo(toScreenX(points[t.b].x), toScreenY(points[t.b].y));
+    ctx.lineTo(toScreenX(points[t.c].x), toScreenY(points[t.c].y));
+    ctx.closePath();
+}
+
+// 两遍绘制，与游戏内 drawSprite 完全一致：中间调打底遮蔽抗锯齿接缝
+function drawFacets() {
+    ctx.fillStyle = palette[3];
+    for (const t of triangles) {
+        trianglePath(t);
+        ctx.fill();
+    }
+    for (const t of triangles) {
+        ctx.fillStyle = palette[t.shade];
+        trianglePath(t);
+        ctx.fill();
+    }
+}
+
+function drawWireframe() {
+    ctx.strokeStyle = 'rgba(215, 217, 221, 0.55)';
+    ctx.lineWidth = 1;
+    for (const t of triangles) {
+        trianglePath(t);
+        ctx.stroke();
+    }
+}
+
+function drawGridLines(x0, x1, y0, y1, step, color, w, h) {
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    for (let x = Math.ceil(x0 / step) * step; x <= x1; x += step) {
+        ctx.moveTo(toScreenX(x), 0);
+        ctx.lineTo(toScreenX(x), h);
+    }
+    for (let y = Math.ceil(y0 / step) * step; y <= y1; y += step) {
+        ctx.moveTo(0, toScreenY(y));
+        ctx.lineTo(w, toScreenY(y));
+    }
+    ctx.stroke();
+}
+
+function drawGrid(w, h) {
+    const x0 = Math.floor(toWorldX(0)) - 1;
+    const x1 = Math.ceil(toWorldX(w)) + 1;
+    const y0 = Math.floor(toWorldY(h)) - 1;
+    const y1 = Math.ceil(toWorldY(0)) + 1;
+    // 单位网格（缩放足够大时才显示，避免糊成一片）
+    if (view.zoom >= 5) drawGridLines(x0, x1, y0, y1, 1, '#3a3d44', w, h);
+    // 每 5 单位加重线
+    drawGridLines(x0, x1, y0, y1, 5, '#4a4e57', w, h);
+    // 坐标轴（x 轴即 y=0 地面基准）
+    ctx.strokeStyle = '#8a8f99';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(0, toScreenY(0));
+    ctx.lineTo(w, toScreenY(0));
+    ctx.moveTo(toScreenX(0), 0);
+    ctx.lineTo(toScreenX(0), h);
+    ctx.stroke();
+    // 原点锚点标记
+    ctx.fillStyle = '#ffd54a';
+    ctx.fillRect(toScreenX(0) - 2.5, toScreenY(0) - 2.5, 5, 5);
+    ctx.font = '11px system-ui, sans-serif';
+    ctx.fillText('(0,0) 锚点', toScreenX(0) + 8, toScreenY(0) + 14);
+    // 轴刻度数字（每 5 单位）
+    ctx.fillStyle = '#8a8f99';
+    ctx.font = '10px system-ui, sans-serif';
+    if (toScreenY(0) >= 0 && toScreenY(0) <= h) {
+        for (let x = Math.ceil(x0 / 5) * 5; x <= x1; x += 5) {
+            if (x !== 0) ctx.fillText(String(x), toScreenX(x) + 3, toScreenY(0) - 4);
+        }
+    }
+    if (toScreenX(0) >= 0 && toScreenX(0) <= w) {
+        for (let y = Math.ceil(y0 / 5) * 5; y <= y1; y += 5) {
+            if (y !== 0) ctx.fillText(String(y), toScreenX(0) + 5, toScreenY(y) - 3);
+        }
+    }
+}
+
+function strokeTriangle(k, color, width) {
+    ctx.strokeStyle = color;
+    ctx.lineWidth = width;
+    trianglePath(triangles[k]);
+    ctx.stroke();
+}
+
+function drawOverlays(w, h) {
+    // 悬停 / 选中三角形
+    if (hoverTriangle >= 0 && hoverTriangle !== selectedTriangle) strokeTriangle(hoverTriangle, '#4f8cff', 2);
+    if (selectedTriangle >= 0) {
+        ctx.fillStyle = 'rgba(255, 213, 74, 0.10)';
+        trianglePath(triangles[selectedTriangle]);
+        ctx.fill();
+        strokeTriangle(selectedTriangle, '#ffd54a', 2);
+    }
+    // 三角形工具草稿预览
+    if (tool === 'triangle' && draft.length > 0) {
+        ctx.strokeStyle = '#4f8cff';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([6, 4]);
+        ctx.beginPath();
+        ctx.moveTo(toScreenX(points[draft[0]].x), toScreenY(points[draft[0]].y));
+        for (let i = 1; i < draft.length; i++) {
+            ctx.lineTo(toScreenX(points[draft[i]].x), toScreenY(points[draft[i]].y));
+        }
+        if (mouseInside) ctx.lineTo(mouseX, mouseY);
+        ctx.stroke();
+        ctx.setLineDash([]);
+    }
+    // 顶点
+    ctx.font = '10px system-ui, sans-serif';
+    for (let i = 0; i < points.length; i++) {
+        const sx = toScreenX(points[i].x);
+        const sy = toScreenY(points[i].y);
+        if (sx < -20 || sy < -20 || sx > w + 20 || sy > h + 20) continue;
+        const isSel = i === selectedPoint;
+        const isHov = i === hoverPoint;
+        ctx.beginPath();
+        ctx.arc(sx, sy, isSel || isHov ? 5 : 3.5, 0, Math.PI * 2);
+        ctx.fillStyle = isSel ? '#ffd54a' : isHov ? '#4f8cff' : '#e8e8e8';
+        ctx.fill();
+        ctx.lineWidth = 1;
+        ctx.strokeStyle = '#1c1d20';
+        ctx.stroke();
+        if (showIndices) {
+            ctx.fillStyle = '#9fd0ff';
+            ctx.fillText(String(i), sx + 6, sy - 6);
+        }
+    }
+    // 鼠标世界坐标读数
+    if (mouseInside) {
+        ctx.fillStyle = '#9fd0ff';
+        ctx.font = '11px Consolas, monospace';
+        ctx.textAlign = 'right';
+        ctx.fillText('(' + snapWorldX(mouseX) + ', ' + snapWorldY(mouseY) + ')', w - 8, 16);
+        ctx.textAlign = 'left';
+    }
+}
+
+// ===== 命中检测 =====
+function pointAt(sx, sy) {
+    let best = -1;
+    let bestDist = 8 * 8;
+    for (let i = 0; i < points.length; i++) {
+        const dx = toScreenX(points[i].x) - sx;
+        const dy = toScreenY(points[i].y) - sy;
+        const d = dx * dx + dy * dy;
+        if (d <= bestDist) {
+            bestDist = d;
+            best = i;
+        }
+    }
+    return best;
+}
+
+function cross(px, py, ax, ay, bx, by) {
+    return (px - bx) * (ay - by) - (ax - bx) * (py - by);
+}
+
+function pointInTriangle(wx, wy, t) {
+    const d1 = cross(wx, wy, points[t.a].x, points[t.a].y, points[t.b].x, points[t.b].y);
+    const d2 = cross(wx, wy, points[t.b].x, points[t.b].y, points[t.c].x, points[t.c].y);
+    const d3 = cross(wx, wy, points[t.c].x, points[t.c].y, points[t.a].x, points[t.a].y);
+    const hasNeg = d1 < 0 || d2 < 0 || d3 < 0;
+    const hasPos = d1 > 0 || d2 > 0 || d3 > 0;
+    return !(hasNeg && hasPos);
+}
+
+// 逆绘制序遍历，命中最上层三角形
+function triangleAt(wx, wy) {
+    for (let i = triangles.length - 1; i >= 0; i--) {
+        if (pointInTriangle(wx, wy, triangles[i])) return i;
+    }
+    return -1;
+}
+
+function updateHover(sx, sy) {
+    if (tool === 'shade') {
+        hoverPoint = -1;
+        hoverTriangle = triangleAt(toWorldX(sx), toWorldY(sy));
+        return;
+    }
+    hoverPoint = pointAt(sx, sy);
+    hoverTriangle = -1;
+    if (hoverPoint < 0 && tool === 'select') {
+        hoverTriangle = triangleAt(toWorldX(sx), toWorldY(sy));
+    }
+}
+
+function updateCursor() {
+    let c = 'default';
+    if (panning) c = 'grabbing';
+    else if (spaceDown) c = 'grab';
+    else if (tool === 'point' || tool === 'triangle' || tool === 'shade') c = 'crosshair';
+    else if (hoverPoint >= 0 || hoverTriangle >= 0) c = 'pointer';
+    canvas.style.cursor = c;
+}
+
+// ===== 编辑操作 =====
+function deletePoint(i) {
+    for (const t of triangles) {
+        if (t.a === i || t.b === i || t.c === i) {
+            setStatus('顶点 #' + i + ' 被三角形引用，请先删除相关三角形');
+            return;
+        }
+    }
+    pushUndo();
+    points.splice(i, 1);
+    // 后移顶点下标会整体偏移，所有引用需要减一
+    for (const t of triangles) {
+        if (t.a > i) t.a--;
+        if (t.b > i) t.b--;
+        if (t.c > i) t.c--;
+    }
+    draft = draft.filter(d => d !== i).map(d => d > i ? d - 1 : d);
+    selectedPoint = -1;
+    refreshTriList();
+    save();
+    render();
+    setStatus('已删除顶点 #' + i);
+}
+
+function deleteTriangle(k) {
+    pushUndo();
+    triangles.splice(k, 1);
+    selectedTriangle = -1;
+    refreshTriList();
+    save();
+    render();
+    setStatus('已删除三角形 #' + k);
+}
+
+// dir=+1 上移一层（后绘制、显示在上）；dir=-1 下移一层
+function moveTriangle(k, dir) {
+    const j = k + dir;
+    if (j < 0 || j >= triangles.length) return;
+    pushUndo();
+    const tmp = triangles[k];
+    triangles[k] = triangles[j];
+    triangles[j] = tmp;
+    if (selectedTriangle === k) selectedTriangle = j;
+    else if (selectedTriangle === j) selectedTriangle = k;
+    refreshTriList();
+    save();
+    render();
+}
+
+function eventPos(e) {
+    const rect = canvas.getBoundingClientRect();
+    return { sx: e.clientX - rect.left, sy: e.clientY - rect.top };
+}
+
+// ===== 鼠标交互 =====
+canvas.addEventListener('mousedown', e => {
+    const pos = eventPos(e);
+    if (e.button === 1 || spaceDown) {
+        panning = true;
+        panStart = { mx: pos.sx, my: pos.sy, ox: view.ox, oy: view.oy };
+        e.preventDefault();
+        updateCursor();
+        return;
+    }
+    if (e.button === 2) {
+        const p = pointAt(pos.sx, pos.sy);
+        if (p >= 0) deletePoint(p);
+        else {
+            const t = triangleAt(toWorldX(pos.sx), toWorldY(pos.sy));
+            if (t >= 0) deleteTriangle(t);
+        }
+        return;
+    }
+    if (e.button !== 0) return;
+    const wx = snapWorldX(pos.sx);
+    const wy = snapWorldY(pos.sy);
+    if (tool === 'select') {
+        const p = pointAt(pos.sx, pos.sy);
+        if (p >= 0) {
+            selectedPoint = p;
+            selectedTriangle = -1;
+            dragging = true;
+            dragMoved = false;
+            dragIndex = p;
+        } else {
+            selectedTriangle = triangleAt(toWorldX(pos.sx), toWorldY(pos.sy));
+            selectedPoint = -1;
+            if (selectedTriangle >= 0) syncShadeUI();
+        }
+        render();
+    } else if (tool === 'point') {
+        const p = pointAt(pos.sx, pos.sy);
+        if (p >= 0) {
+            selectedPoint = p;
+            setStatus('此处已有顶点 #' + p);
+            render();
+            return;
+        }
+        pushUndo();
+        points.push({ x: wx, y: wy });
+        selectedPoint = points.length - 1;
+        save();
+        render();
+        setStatus('已放置顶点 #' + selectedPoint + ' (' + wx + ',' + wy + ')');
+    } else if (tool === 'triangle') {
+        const p = pointAt(pos.sx, pos.sy);
+        if (p < 0) { setStatus('请点击已存在的顶点'); return; }
+        if (draft.includes(p)) { setStatus('不能重复选择同一顶点'); return; }
+        draft.push(p);
+        if (draft.length === 3) {
+            const a = draft[0], b = draft[1], c = draft[2];
+            const area2 = Math.abs(
+                (points[b].x - points[a].x) * (points[c].y - points[a].y) -
+                (points[b].y - points[a].y) * (points[c].x - points[a].x));
+            if (area2 === 0) {
+                setStatus('三点共线，无法构成三角形');
+                draft = [];
+                render();
+                return;
+            }
+            pushUndo();
+            triangles.push({ a, b, c, shade: 1 });
+            setStatus('已添加三角形 #' + (triangles.length - 1));
+            draft = [];
+            refreshTriList();
+            save();
+        }
+        render();
+    } else if (tool === 'shade') {
+        const t = triangleAt(toWorldX(pos.sx), toWorldY(pos.sy));
+        if (t < 0) { setStatus('未命中三角形'); return; }
+        selectedTriangle = t;
+        selectedPoint = -1;
+        syncShadeUI();
+        refreshTriList();
+        render();
+        setStatus('已选中三角形 #' + t + '，色阶 S' + triangles[t].shade);
+    }
+});
+
+window.addEventListener('mousemove', e => {
+    const pos = eventPos(e);
+    mouseX = pos.sx;
+    mouseY = pos.sy;
+    mouseInside = pos.sx >= 0 && pos.sy >= 0 && pos.sx <= canvas.clientWidth && pos.sy <= canvas.clientHeight;
+    if (panning) {
+        view.ox = panStart.ox + (pos.sx - panStart.mx);
+        view.oy = panStart.oy + (pos.sy - panStart.my);
+        render();
+        return;
+    }
+    if (dragging && dragIndex >= 0) {
+        const nx = snapWorldX(pos.sx);
+        const ny = snapWorldY(pos.sy);
+        const pt = points[dragIndex];
+        if (!dragMoved) {
+            if (nx === pt.x && ny === pt.y) return;
+            pushUndo();
+            dragMoved = true;
+        }
+        pt.x = nx;
+        pt.y = ny;
+        render();
+        return;
+    }
+    if (mouseInside) updateHover(pos.sx, pos.sy);
+    else {
+        hoverPoint = -1;
+        hoverTriangle = -1;
+    }
+    updateCursor();
+    render();
+});
+
+window.addEventListener('mouseup', () => {
+    if (dragging) {
+        dragging = false;
+        if (dragMoved) {
+            save();
+            setStatus('顶点已移动');
+        }
+    }
+    if (panning) {
+        panning = false;
+        updateCursor();
+    }
+});
+
+canvas.addEventListener('mouseleave', () => {
+    mouseInside = false;
+    hoverPoint = -1;
+    hoverTriangle = -1;
+    render();
+});
+
+canvas.addEventListener('contextmenu', e => e.preventDefault());
+
+// 滚轮：调光工具悬停三角形时调光，否则缩放视图
+canvas.addEventListener('wheel', e => {
+    e.preventDefault();
+    const pos = eventPos(e);
+    if (tool === 'shade' && hoverTriangle >= 0) {
+        const t = triangles[hoverTriangle];
+        const next = clampShade(t.shade + (e.deltaY < 0 ? 1 : -1));
+        if (next !== t.shade) {
+            pushUndo();
+            t.shade = next;
+            if (selectedTriangle === hoverTriangle) syncShadeUI();
+            refreshTriList();
+            save();
+            render();
+            setStatus('三角形 #' + hoverTriangle + ' 色阶 S' + next);
+        }
+        return;
+    }
+    const factor = Math.exp(-e.deltaY * 0.0012);
+    const wx = toWorldX(pos.sx);
+    const wy = toWorldY(pos.sy);
+    view.zoom = Math.max(2, Math.min(60, view.zoom * factor));
+    view.ox = pos.sx - wx * view.zoom;
+    view.oy = pos.sy - wy * view.zoom;
+    render();
+}, { passive: false });
+
+// ===== 键盘交互 =====
+window.addEventListener('keydown', e => {
+    const tag = e.target && e.target.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+    if (e.code === 'Space') {
+        e.preventDefault();
+        spaceDown = true;
+        updateCursor();
+        return;
+    }
+    if (e.key === 'Escape') {
+        draft = [];
+        selectedPoint = -1;
+        selectedTriangle = -1;
+        render();
+        return;
+    }
+    if (e.key === 'Delete' || e.key === 'Backspace') {
+        e.preventDefault();
+        if (selectedPoint >= 0) deletePoint(selectedPoint);
+        else if (selectedTriangle >= 0) deleteTriangle(selectedTriangle);
+        return;
+    }
+    if ((e.ctrlKey || e.metaKey) && (e.key === 'z' || e.key === 'Z')) {
+        e.preventDefault();
+        undo();
+        return;
+    }
+    if (e.key === '1') setTool('select');
+    else if (e.key === '2') setTool('point');
+    else if (e.key === '3') setTool('triangle');
+    else if (e.key === '4') setTool('shade');
+});
+
+window.addEventListener('keyup', e => {
+    if (e.code === 'Space') {
+        spaceDown = false;
+        updateCursor();
+    }
+});
+
+function setTool(name) {
+    tool = name;
+    draft = [];
+    toolButtons.forEach(b => b.classList.toggle('active', b.dataset.tool === name));
+    toolHint.textContent = HINTS[name];
+    updateCursor();
+    render();
+}
+
+// ===== 工具栏 UI =====
+let statusTimer = 0;
+
+function setStatus(msg) {
+    statusEl.textContent = msg;
+    clearTimeout(statusTimer);
+    statusTimer = setTimeout(() => { statusEl.textContent = ''; }, 3000);
+}
+
+// 列表自上而下 = 自上层至下层（与绘制顺序相反）
+function refreshTriList() {
+    triCount.textContent = triangles.length > 0 ? '(' + triangles.length + ')' : '(0)';
+    triList.innerHTML = '';
+    for (let k = triangles.length - 1; k >= 0; k--) {
+        const t = triangles[k];
+        const row = document.createElement('div');
+        row.className = 'triRow' + (k === selectedTriangle ? ' selected' : '');
+        const label = document.createElement('span');
+        label.className = 'triLabel';
+        label.textContent = '#' + k + ' (' + t.a + ',' + t.b + ',' + t.c + ')';
+        const chip = document.createElement('span');
+        chip.className = 'triShade';
+        chip.style.background = palette[t.shade];
+        chip.textContent = 'S' + t.shade;
+        const up = mkBtn('▲', '上移一层（后绘制、显示在上）', () => moveTriangle(k, 1));
+        const down = mkBtn('▼', '下移一层', () => moveTriangle(k, -1));
+        const del = mkBtn('✕', '删除', () => deleteTriangle(k));
+        row.append(label, chip, up, down, del);
+        row.addEventListener('click', () => {
+            selectedTriangle = k;
+            selectedPoint = -1;
+            syncShadeUI();
+            refreshTriList();
+            render();
+        });
+        triList.append(row);
+    }
+}
+
+function mkBtn(text, title, fn) {
+    const b = document.createElement('button');
+    b.className = 'mini';
+    b.textContent = text;
+    b.title = title;
+    b.addEventListener('click', e => {
+        e.stopPropagation();
+        fn();
+    });
+    return b;
+}
+
+const swatchEls = [];
+
+// 色板为可编辑颜色组：每个色阶是一个 input[type=color]，改色即时生效（供美术调试）
+function buildSwatches() {
+    for (let i = 0; i < DEFAULT_PALETTE.length; i++) {
+        const s = document.createElement('input');
+        s.type = 'color';
+        s.title = 'S' + i + ' 色阶颜色（点击修改）';
+        s.addEventListener('input', () => {
+            palette[i] = s.value;
+            updateShadeLabel(clampShade(shadeSlider.value));
+            refreshTriList();
+            save();
+            render();
+        });
+        swatches.append(s);
+        swatchEls.push(s);
+    }
+}
+
+function syncPaletteUI() {
+    for (let i = 0; i < swatchEls.length; i++) swatchEls[i].value = palette[i];
+    bgColorInput.value = bgColor;
+    bgLabel.textContent = bgColor;
+}
+
+function updateShadeLabel(v) {
+    shadeLabel.textContent = 'S' + v + ' · ' + palette[v];
+    // 金色描边标示当前滑杆对应的色阶
+    for (let i = 0; i < swatchEls.length; i++) {
+        swatchEls[i].style.outline = i === v ? '2px solid #ffd54a' : 'none';
+    }
+}
+
+// 选中三角形后，滑杆/色块调节其色阶
+function applyShade(v, isGesture) {
+    v = clampShade(v);
+    shadeSlider.value = v;
+    if (selectedTriangle >= 0 && triangles[selectedTriangle].shade !== v) {
+        if (isGesture) {
+            if (!sliderGesture) {
+                pushUndo();
+                sliderGesture = true;
+            }
+        } else {
+            pushUndo();
+        }
+        triangles[selectedTriangle].shade = v;
+        refreshTriList();
+        save();
+        render();
+    }
+    updateShadeLabel(v);
+}
+
+function syncShadeUI() {
+    const v = selectedTriangle >= 0 ? triangles[selectedTriangle].shade : clampShade(shadeSlider.value);
+    shadeSlider.value = v;
+    updateShadeLabel(v);
+}
+
+shadeSlider.addEventListener('input', () => applyShade(+shadeSlider.value, true));
+shadeSlider.addEventListener('change', () => { sliderGesture = false; });
+
+document.getElementById('toggleGrid').addEventListener('change', e => { showGrid = e.target.checked; render(); });
+document.getElementById('toggleIndices').addEventListener('change', e => { showIndices = e.target.checked; render(); });
+document.getElementById('toggleFill').addEventListener('change', e => { showFill = e.target.checked; render(); });
+
+bgColorInput.addEventListener('input', () => {
+    bgColor = bgColorInput.value;
+    bgLabel.textContent = bgColor;
+    save();
+    render();
+});
+
+document.getElementById('btnResetPalette').addEventListener('click', () => {
+    palette = DEFAULT_PALETTE.slice();
+    syncPaletteUI();
+    updateShadeLabel(clampShade(shadeSlider.value));
+    refreshTriList();
+    save();
+    render();
+    setStatus('已恢复默认色板');
+});
+
+document.getElementById('btnResetBg').addEventListener('click', () => {
+    bgColor = DEFAULT_BG;
+    syncPaletteUI();
+    save();
+    render();
+    setStatus('已恢复默认背景');
+});
+
+toolButtons.forEach(b => b.addEventListener('click', () => setTool(b.dataset.tool)));
+
+// ===== 导出 / 导入 =====
+function chunkJoin(arr, size) {
+    const parts = [];
+    for (let i = 0; i < arr.length; i += size) parts.push(arr.slice(i, i + size).join(', '));
+    return parts.join(',\n    ');
+}
+
+function buildExportText(name) {
+    const pts = [];
+    const tris = [];
+    const shades = [];
+    for (const p of points) pts.push(p.x, p.y);
+    for (const t of triangles) {
+        tris.push(t.a, t.b, t.c);
+        shades.push(t.shade);
+    }
+    return 'export const ' + name + ': Sprite = {\n'
+        + '    pts: [' + chunkJoin(pts, 12) + '],\n'
+        + '    tris: [' + chunkJoin(tris, 12) + '],\n'
+        + '    shades: [' + chunkJoin(shades, 12) + '],\n'
+        + '    palette: [' + palette.map(c => "'" + c + "'").join(', ') + '],\n'
+        + '};';
+}
+
+document.getElementById('btnExport').addEventListener('click', () => {
+    const name = spriteName.value.trim() || 'UNICORN';
+    if (!/^[A-Za-z_$][A-Za-z0-9_$]*$/.test(name)) {
+        setStatus('名称不是合法标识符');
+        return;
+    }
+    ioText.value = buildExportText(name);
+    ioText.focus();
+    ioText.select();
+    try {
+        navigator.clipboard.writeText(ioText.value);
+        setStatus('已导出 ' + points.length + ' 顶点 / ' + triangles.length + ' 三角形，并复制到剪贴板');
+    } catch (err) {
+        setStatus('已导出，请手动复制（textarea 已全选）');
+    }
+});
+
+// 先剥离行注释再取数：注释中的数字（如 "// 头（自顶点 0 扇形）"）不应混入数据
+function parseNums(s) {
+    return s.replace(/\/\/[^\n]*/g, ' ')
+        .split(/[\s,]+/)
+        .filter(t => t.length > 0)
+        .map(Number)
+        .filter(Number.isFinite);
+}
+
+document.getElementById('btnImport').addEventListener('click', () => {
+    const text = ioText.value;
+    const ptsM = text.match(/pts\s*:\s*\[([^\]]*)\]/);
+    const trisM = text.match(/tris\s*:\s*\[([^\]]*)\]/);
+    const shM = text.match(/shades\s*:\s*\[([^\]]*)\]/);
+    const palM = text.match(/palette\s*:\s*\[([^\]]*)\]/);
+    if (!ptsM || !trisM) {
+        setStatus('导入失败：未找到 pts / tris 数组');
+        return;
+    }
+    const pts = parseNums(ptsM[1]);
+    const tris = parseNums(trisM[1]);
+    const sh = shM ? parseNums(shM[1]) : [];
+    if (pts.length < 2 || pts.length % 2 !== 0) {
+        setStatus('导入失败：pts 数量异常');
+        return;
+    }
+    const newPoints = [];
+    for (let i = 0; i + 1 < pts.length; i += 2) {
+        newPoints.push({ x: Math.round(pts[i]), y: Math.round(pts[i + 1]) });
+    }
+    const triCount = Math.floor(tris.length / 3);
+    const newTris = [];
+    for (let k = 0; k < triCount; k++) {
+        const a = tris[k * 3], b = tris[k * 3 + 1], c = tris[k * 3 + 2];
+        if (a < 0 || b < 0 || c < 0 || a >= newPoints.length || b >= newPoints.length || c >= newPoints.length) {
+            setStatus('导入失败：三角形 ' + k + ' 顶点索引越界');
+            return;
+        }
+        if (a === b || b === c || a === c) {
+            setStatus('导入失败：三角形 ' + k + ' 存在重复顶点');
+            return;
+        }
+        newTris.push({ a, b, c, shade: clampShade(sh[k] !== undefined ? sh[k] : 1) });
+    }
+    // 若文本带有自定义 palette 数组则一并导入（GRAY_PALETTE 引用或缺省则保持当前）
+    if (palM) {
+        const colors = [...palM[1].matchAll(/['"]([^'"]+)['"]/g)].map(m => m[1]).filter(isHexColor);
+        for (let i = 0; i < DEFAULT_PALETTE.length; i++) {
+            palette[i] = colors[i] !== undefined ? colors[i] : DEFAULT_PALETTE[i];
+        }
+    }
+    pushUndo();
+    points = newPoints;
+    triangles = newTris;
+    selectedPoint = -1;
+    selectedTriangle = -1;
+    draft = [];
+    refreshTriList();
+    syncPaletteUI();
+    fitView();
+    save();
+    render();
+    setStatus('已导入 ' + newPoints.length + ' 顶点 / ' + newTris.length + ' 三角形');
+});
+
+document.getElementById('btnClear').addEventListener('click', () => {
+    if (points.length === 0 && triangles.length === 0) return;
+    if (!confirm('确定清空所有顶点与三角形？（可 Ctrl+Z 撤销）')) return;
+    pushUndo();
+    points = [];
+    triangles = [];
+    draft = [];
+    selectedPoint = -1;
+    selectedTriangle = -1;
+    refreshTriList();
+    save();
+    render();
+    setStatus('已清空');
+});
+
+// ===== 视图适配与初始化 =====
+function fitView() {
+    const w = wrap.clientWidth || 800;
+    const h = wrap.clientHeight || 600;
+    if (points.length === 0) {
+        view.ox = w / 2;
+        view.oy = h * 0.7;
+        view.zoom = 10;
+        return;
+    }
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    for (const p of points) {
+        minX = Math.min(minX, p.x);
+        maxX = Math.max(maxX, p.x);
+        minY = Math.min(minY, p.y);
+        maxY = Math.max(maxY, p.y);
+    }
+    const bw = Math.max(maxX - minX, 10);
+    const bh = Math.max(maxY - minY, 10);
+    view.zoom = Math.max(2, Math.min(40, Math.min((w - 80) / bw, (h - 80) / bh)));
+    view.ox = w / 2 - (minX + maxX) / 2 * view.zoom;
+    view.oy = h / 2 - (minY + maxY) / 2 * view.zoom;
+}
+
+function fromFlat(def) {
+    const pts = [];
+    for (let i = 0; i + 1 < def.pts.length; i += 2) pts.push({ x: def.pts[i], y: def.pts[i + 1] });
+    const tris = [];
+    for (let k = 0; k * 3 + 2 < def.tris.length; k++) {
+        tris.push({
+            a: def.tris[k * 3],
+            b: def.tris[k * 3 + 1],
+            c: def.tris[k * 3 + 2],
+            shade: clampShade(def.shades[k] !== undefined ? def.shades[k] : 1),
+        });
+    }
+    return { pts, tris };
+}
+
+if (!load()) {
+    const def = fromFlat(DEFAULT_UNICORN);
+    points = def.pts;
+    triangles = def.tris;
+}
+
+new ResizeObserver(resizeCanvas).observe(wrap);
+buildSwatches();
+syncPaletteUI();
+refreshTriList();
+resizeCanvas();
+fitView();
+syncShadeUI();
+setTool('select');
+render();
+setStatus('滚轮缩放 / 空格或中键平移 / Ctrl+Z 撤销 / 数字键 1-4 切换工具');
+</script>
+</body>
+</html>

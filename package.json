@@ -4,7 +4,9 @@
   "type": "module",
   "main": "index.js",
   "scripts": {
-    "build": "node build.ts"
+    "build": "node build.ts",
+    "game": "start build/index.html",
+    "editor": "start tools/editor.html"
   },
   "keywords": [],
   "author": "",
