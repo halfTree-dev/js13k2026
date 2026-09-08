@@ -144,7 +144,7 @@ const DEFAULT_UNICORN = {
 };
 
 const HINTS = {
-    select: '拖动顶点调整外形；点击三角形选中后可用滑杆调光；Delete 删除选中项；右键删除悬停元素',
+    select: '拖动顶点调整外形；按住三角形拖动可整体移动其三个顶点；点击三角形选中后可用滑杆调光；Delete 删除选中项；右键删除悬停元素',
     point: '点击空白处放置顶点（自动吸附整数格点）',
     triangle: '依次点击 3 个已有顶点构成三角形；Esc 取消半途选择',
     shade: '点击三角形选中后用滑杆调光；悬停三角形时滚轮直接调光',
@@ -164,6 +164,10 @@ let draft = [];          // 三角形工具的半成品顶点
 let dragging = false;
 let dragMoved = false;
 let dragIndex = -1;
+let dragTriangle = -1;   // 整体拖动中的三角形索引
+let dragStartX = 0;      // 拖动起点的吸附世界坐标
+let dragStartY = 0;
+let dragOrig = null;     // 拖动起点时三角形三顶点的原始坐标
 let sliderGesture = false;
 let spaceDown = false;
 let panning = false;
@@ -325,11 +329,21 @@ function drawGridLines(x0, x1, y0, y1, step, color, w, h) {
         ctx.moveTo(toScreenX(x), 0);
         ctx.lineTo(toScreenX(x), h);
     }
-    for (let y = Math.ceil(y0 / step) * step; y <= y1; y += step) {
+    // y1 为视口顶部的世界坐标，恒小于底部的 y0，必须自上而下遍历
+    for (let y = Math.ceil(y1 / step) * step; y <= y0; y += step) {
         ctx.moveTo(0, toScreenY(y));
         ctx.lineTo(w, toScreenY(y));
     }
     ctx.stroke();
+}
+
+// 轴刻度数字步长：按 zoom 从梯子中取满足最小屏幕间距（约 40px）的最小步长
+function axisLabelStep() {
+    const steps = [5, 10, 20, 50, 100, 200, 500, 1000, 2000];
+    for (const s of steps) {
+        if (s * view.zoom >= 40) return s;
+    }
+    return steps[steps.length - 1];
 }
 
 function drawGrid(w, h) {
@@ -355,16 +369,18 @@ function drawGrid(w, h) {
     ctx.fillRect(toScreenX(0) - 2.5, toScreenY(0) - 2.5, 5, 5);
     ctx.font = '11px system-ui, sans-serif';
     ctx.fillText('(0,0) 锚点', toScreenX(0) + 8, toScreenY(0) + 14);
-    // 轴刻度数字（每 5 单位）
+    // 轴刻度数字：步长随 zoom 自适应，缩放过小时自动抽稀，避免数字糊在一起
+    const labelStep = axisLabelStep();
     ctx.fillStyle = '#8a8f99';
     ctx.font = '10px system-ui, sans-serif';
     if (toScreenY(0) >= 0 && toScreenY(0) <= h) {
-        for (let x = Math.ceil(x0 / 5) * 5; x <= x1; x += 5) {
+        for (let x = Math.ceil(x0 / labelStep) * labelStep; x <= x1; x += labelStep) {
             if (x !== 0) ctx.fillText(String(x), toScreenX(x) + 3, toScreenY(0) - 4);
         }
     }
     if (toScreenX(0) >= 0 && toScreenX(0) <= w) {
-        for (let y = Math.ceil(y0 / 5) * 5; y <= y1; y += 5) {
+        // y1（顶部）小于 y0（底部），自上而下遍历
+        for (let y = Math.ceil(y1 / labelStep) * labelStep; y <= y0; y += labelStep) {
             if (y !== 0) ctx.fillText(String(y), toScreenX(0) + 5, toScreenY(y) - 3);
         }
     }
@@ -554,6 +570,10 @@ canvas.addEventListener('mousedown', e => {
         return;
     }
     if (e.button === 2) {
+        // 若左键拖动进行中，先取消拖动再执行删除，避免拖动状态悬空
+        dragging = false;
+        dragTriangle = -1;
+        dragOrig = null;
         const p = pointAt(pos.sx, pos.sy);
         if (p >= 0) deletePoint(p);
         else {
@@ -573,10 +593,26 @@ canvas.addEventListener('mousedown', e => {
             dragging = true;
             dragMoved = false;
             dragIndex = p;
+            dragTriangle = -1;
         } else {
             selectedTriangle = triangleAt(toWorldX(pos.sx), toWorldY(pos.sy));
             selectedPoint = -1;
-            if (selectedTriangle >= 0) syncShadeUI();
+            if (selectedTriangle >= 0) {
+                syncShadeUI();
+                // 命中三角形：按下即准备整体拖动其三个顶点
+                dragging = true;
+                dragMoved = false;
+                dragTriangle = selectedTriangle;
+                dragIndex = -1;
+                dragStartX = wx;
+                dragStartY = wy;
+                const t = triangles[selectedTriangle];
+                dragOrig = [
+                    { x: points[t.a].x, y: points[t.a].y },
+                    { x: points[t.b].x, y: points[t.b].y },
+                    { x: points[t.c].x, y: points[t.c].y },
+                ];
+            }
         }
         render();
     } else if (tool === 'point') {
@@ -654,6 +690,22 @@ window.addEventListener('mousemove', e => {
         render();
         return;
     }
+    if (dragging && dragTriangle >= 0) {
+        // 按吸附世界坐标的整数增量平移三角形三顶点
+        const dx = snapWorldX(pos.sx) - dragStartX;
+        const dy = snapWorldY(pos.sy) - dragStartY;
+        if (!dragMoved) {
+            if (dx === 0 && dy === 0) return;
+            pushUndo();
+            dragMoved = true;
+        }
+        const t = triangles[dragTriangle];
+        points[t.a] = { x: dragOrig[0].x + dx, y: dragOrig[0].y + dy };
+        points[t.b] = { x: dragOrig[1].x + dx, y: dragOrig[1].y + dy };
+        points[t.c] = { x: dragOrig[2].x + dx, y: dragOrig[2].y + dy };
+        render();
+        return;
+    }
     if (mouseInside) updateHover(pos.sx, pos.sy);
     else {
         hoverPoint = -1;
@@ -668,8 +720,11 @@ window.addEventListener('mouseup', () => {
         dragging = false;
         if (dragMoved) {
             save();
-            setStatus('顶点已移动');
+            setStatus(dragTriangle >= 0 ? '三角形已整体移动' : '顶点已移动');
         }
+        dragIndex = -1;
+        dragTriangle = -1;
+        dragOrig = null;
     }
     if (panning) {
         panning = false;
@@ -707,7 +762,7 @@ canvas.addEventListener('wheel', e => {
     const factor = Math.exp(-e.deltaY * 0.0012);
     const wx = toWorldX(pos.sx);
     const wy = toWorldY(pos.sy);
-    view.zoom = Math.max(2, Math.min(60, view.zoom * factor));
+    view.zoom = Math.max(1, Math.min(90, view.zoom * factor));
     view.ox = pos.sx - wx * view.zoom;
     view.oy = pos.sy - wy * view.zoom;
     render();

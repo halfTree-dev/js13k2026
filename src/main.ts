@@ -74,7 +74,7 @@ function gameRender(): void {
     context.rect(0, 0, VIEW_WIDTH, VIEW_HEIGHT);
     context.clip();
 
-    context.fillStyle = '#555555';
+    context.fillStyle = '#2b2b2b';
     context.fillRect(0, 0, VIEW_WIDTH, VIEW_HEIGHT);
 
     gameLevel.render(context);
