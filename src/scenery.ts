@@ -1,10 +1,14 @@
 import { VIEW_WIDTH } from './main';
-import { Sprite, drawSprite, CITY_FAR_SKYLINE, CITY_MID_FAR_SKYLINE, CITY_VIADUCT } from './sprite';
+import { Sprite, drawSprite, CITY_FAR_SKYLINE, CITY_MID_FAR_SKYLINE, CITY_VIADUCT,
+    PROP_BILLBOARD, PROP_TRAFFIC_SIGN, PROP_STREET_LAMP, PROP_TRAFFIC_CONE,
+    PROP_TAXI, PROP_BARRIER, PROP_POPLAR, PROP_BUSH, PROP_BIKE,
+    PROP_PALETTE_RED, PROP_PALETTE_ORANGE, PROP_PALETTE_YELLOW, PROP_PALETTE_GREEN, PROP_PALETTE_BLUE } from './sprite';
 
 // 滚动系数
 const FAR_SCROLL_FACTOR = 0.05;
 const MID_FAR_SCROLL_FACTOR = 0.08;
 const MID_SCROLL_FACTOR = 0.20;
+const NEAR_SCROLL_FACTOR = 0.45;
 
 // 远景平铺宽度
 const FAR_TILE_WIDTH = 1280;
@@ -15,6 +19,68 @@ const MID_FAR_PHASE = 640;
 
 // 中景高架桥
 const MID_VIADUCT_WIDTH = 185;
+
+// 近景
+const NEAR_COLORED = false;
+const NEAR_SPAWN_MARGIN = 720;
+
+interface NearProp {
+    sprite: Sprite;
+    spacing: number;
+    scale: number;
+    palette: string[];
+}
+
+function tinted(sprite: Sprite, palette: string[]): Sprite {
+    return NEAR_COLORED ? { ...sprite, palette } : sprite;
+}
+
+const NEAR_PROPS: NearProp[] = [
+    { sprite: PROP_BILLBOARD, spacing: 480, scale: 1, palette: PROP_PALETTE_RED },
+    { sprite: PROP_TRAFFIC_SIGN, spacing: 150, scale: 1, palette: PROP_PALETTE_RED },
+    { sprite: PROP_STREET_LAMP, spacing: 260, scale: 1, palette: PROP_PALETTE_ORANGE },
+    { sprite: PROP_TRAFFIC_CONE, spacing: 120, scale: 1, palette: PROP_PALETTE_ORANGE },
+    { sprite: PROP_TAXI, spacing: 330, scale: 0.85, palette: PROP_PALETTE_YELLOW },
+    { sprite: PROP_BARRIER, spacing: 300, scale: 1, palette: PROP_PALETTE_YELLOW },
+    { sprite: PROP_POPLAR, spacing: 240, scale: 1, palette: PROP_PALETTE_GREEN },
+    { sprite: PROP_BUSH, spacing: 240, scale: 1, palette: PROP_PALETTE_GREEN },
+    { sprite: PROP_BIKE, spacing: 140, scale: 0.65, palette: PROP_PALETTE_BLUE },
+];
+
+class NearScenery {
+    private propPlaced: { x: number; right: number; sprite: Sprite; scale: number; flip: boolean }[] = [];
+    private propPlaceCursor = 250;
+
+    render(context: CanvasRenderingContext2D, worldScroll: number, baseY: number): void {
+        const scroll = worldScroll * NEAR_SCROLL_FACTOR;
+
+        // 放置新资产
+        while (this.propPlaceCursor < scroll + VIEW_WIDTH + NEAR_SPAWN_MARGIN) {
+            let index = Math.floor(Math.random() * NEAR_PROPS.length);
+            const prop = NEAR_PROPS[index];
+            const scale = prop.scale * (0.85 + Math.random() * 0.2);
+            this.propPlaced.push({
+                x: this.propPlaceCursor + (prop.spacing * prop.scale) / 2,
+                right: this.propPlaceCursor + prop.spacing,
+                sprite: tinted(prop.sprite, prop.palette),
+                scale,
+                flip: Math.random() < 0.5,
+            });
+            this.propPlaceCursor += prop.spacing;
+        }
+
+        // 回收资产
+        for (let i = this.propPlaced.length - 1; i >= 0; i--) {
+            const item = this.propPlaced[i];
+            if (item.right < scroll - 100) {
+                this.propPlaced.splice(i, 1);
+                continue;
+            }
+            drawSprite(context, item.sprite, item.x - scroll, baseY, item.scale, item.scale, item.flip);
+        }
+    }
+}
+const nearScenery = new NearScenery();
 
 class CityScenery {
     render(context: CanvasRenderingContext2D, worldScroll: number, baseY: number): void {
@@ -35,6 +101,9 @@ class CityScenery {
         for (let x = -midOffset; x < VIEW_WIDTH; x += MID_VIADUCT_WIDTH) {
             drawSprite(context, CITY_VIADUCT, x, baseY);
         }
+
+        // 近景连续街景
+        nearScenery.render(context, worldScroll, baseY);
     }
 }
 
