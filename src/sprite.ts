@@ -383,11 +383,14 @@ function traceTriangle(ctx: CanvasRenderingContext2D, sprite: Sprite, index: num
     ctx.closePath();
 }
 
-// 绘制指定精灵（横向与纵向缩放独立，scaleY 缺省跟随 scaleX）
-export function drawSprite(ctx: CanvasRenderingContext2D, sprite: Sprite, x: number, y: number, scaleX = 1, scaleY = scaleX, flipX = false): void {
+// 绘制指定精灵（横向与纵向缩放独立，scaleY 缺省跟随 scaleX；rotation 为绕锚点的旋转角度，缺省不旋转）
+export function drawSprite(ctx: CanvasRenderingContext2D, sprite: Sprite, x: number, y: number, scaleX = 1, scaleY = scaleX, flipX = false, rotation = 0): void {
     const triangleCount = sprite.tris.length / 3;
     ctx.save();
     ctx.translate(x, y);
+    if (rotation !== 0) {
+        ctx.rotate(rotation);
+    }
     ctx.scale(flipX ? -scaleX : scaleX, scaleY);
 
     ctx.fillStyle = sprite.palette[3];

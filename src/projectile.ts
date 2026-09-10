@@ -140,7 +140,8 @@ class ProjectileManager {
     render(context: CanvasRenderingContext2D): void {
         for (const projectile of this.projectiles) {
             if (projectile.sprite) {
-                drawSprite(context, projectile.sprite, projectile.x, projectile.y, projectile.radius / 12);
+                const angle = Math.atan2(projectile.vy, projectile.vx);
+                drawSprite(context, projectile.sprite, projectile.x, projectile.y, projectile.radius / 12, projectile.radius / 12, false, angle);
             }
         }
     }
