@@ -368,6 +368,30 @@ export const PROP_BIKE: Sprite = {
     palette: PROP_PALETTE_GRAY,
 };
 
+// 友方弹幕默认素材：朝 +x 的光箭（默认朝右绘制，配合旋转角=速度方向的渲染约定）
+export const PROJECTILE_FRIENDLY: Sprite = {
+    pts: [16, 0, 4, -4, 4, 4, -12, -3, -12, 3, -17, -8, -17, 8, -12, 0],
+    tris: [0, 1, 2, 1, 3, 2, 2, 4, 3, 5, 3, 7, 6, 7, 4],
+    shades: [0, 1, 1, 2, 2],
+    palette: ['#fffdf0', '#ffe08a', '#f0b429', '#a37a14'],
+};
+
+// 敌方弹幕默认素材：朝 +x 的尖刺能量弹
+export const PROJECTILE_ENEMY: Sprite = {
+    pts: [18, 0, 2, -7, -4, -5, -9, -10, -9, 10, -4, 5, 2, 7, -14, 0],
+    tris: [0, 1, 6, 1, 2, 7, 2, 3, 7, 6, 7, 5, 5, 7, 4],
+    shades: [0, 1, 2, 1, 2],
+    palette: ['#ffd2d2', '#e04848', '#8f1d1d', '#571212'],
+};
+
+// 敌怪占位素材：朝 +x 的极简飞鸟
+export const ENEMY_PLACEHOLDER: Sprite = {
+    pts: [18, 0, 6, -6, -10, -4, -14, 0, -10, 4, 6, 6, 0, -16, -8, -5],
+    tris: [0, 1, 2, 0, 2, 3, 0, 3, 4, 0, 4, 5, 6, 7, 2],
+    shades: [1, 2, 2, 2, 4],
+    palette: ['#9a9a9a', '#7d7d7d', '#646464', '#4a4a4a', '#303030'],
+};
+
 // 制造指定三角形的闭合路径
 function traceTriangle(ctx: CanvasRenderingContext2D, sprite: Sprite, index: number): void {
     const base = index * 3;
@@ -383,7 +407,7 @@ function traceTriangle(ctx: CanvasRenderingContext2D, sprite: Sprite, index: num
     ctx.closePath();
 }
 
-// 绘制指定精灵（横向与纵向缩放独立，scaleY 缺省跟随 scaleX；rotation 为绕锚点的旋转角度，缺省不旋转）
+// 绘制指定精灵
 export function drawSprite(ctx: CanvasRenderingContext2D, sprite: Sprite, x: number, y: number, scaleX = 1, scaleY = scaleX, flipX = false, rotation = 0): void {
     const triangleCount = sprite.tris.length / 3;
     ctx.save();

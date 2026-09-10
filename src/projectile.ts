@@ -1,6 +1,7 @@
-import { gameLevel } from './level';
+import { gameLevel, PLAYER_HITBOX_OFFSET_X, PLAYER_HITBOX_WIDTH, PLAYER_HITBOX_OFFSET_Y, PLAYER_HITBOX_HEIGHT, PLAYER_HITBOX_CENTER_Y } from './level';
 import { VIEW_WIDTH, VIEW_HEIGHT } from './main';
-import { Sprite, drawSprite } from './sprite';
+import { entityManager } from './entity';
+import { Sprite, drawSprite, PROJECTILE_FRIENDLY, PROJECTILE_ENEMY } from './sprite';
 
 // 弹幕行为标签
 type ProjectileBehavior =
@@ -11,8 +12,6 @@ type ProjectileBehavior =
     | { kind: 'decelerate'; ax: number; ay: number; minSpeed: number }
     | { kind: 'spiral'; radius: number; angularSpeed: number }
     | { kind: 'sine'; amplitude: number; frequency: number };
-
-type BehaviorKind = ProjectileBehavior['kind'];
 
 // 弹幕对象
 interface Projectile {
@@ -31,11 +30,13 @@ interface Projectile {
     sprite: Sprite | null;
     // 行为标签
     behavior: ProjectileBehavior;
+    // 是否友方弹幕，友方命中敌怪，敌方命中玩家，避免自伤判定
+    friendly: boolean;
     // 生命周期
     lifetime: number;
     // 已存在时间
     age: number;
-    // 碰撞半径，也决定占位图形大小
+    // 碰撞半径
     radius: number;
     // 回收标记
     dead: boolean;
@@ -48,6 +49,7 @@ interface ProjectileConfig {
     vx: number;
     vy: number;
     behavior: ProjectileBehavior;
+    friendly: boolean;
     radius?: number;
     lifetime?: number;
     sprite?: Sprite | null;
@@ -56,25 +58,8 @@ interface ProjectileConfig {
 // 出屏回收边距
 const PROJECTILE_DESPAWN_MARGIN = 80;
 
-// 玩家碰撞盒偏移与尺寸
-const PLAYER_HITBOX_OFFSET_X = -30;
-const PLAYER_HITBOX_WIDTH = 65;
-const PLAYER_HITBOX_OFFSET_Y = -75;
-const PLAYER_HITBOX_HEIGHT = 85;
-
-// 玩家碰撞盒中心相对锚点的纵向偏移
-const PLAYER_HITBOX_CENTER_Y = PLAYER_HITBOX_OFFSET_Y + PLAYER_HITBOX_HEIGHT / 2;
-
-// 占位渲染时各行为对应的颜色，便于肉眼区分
-const BEHAVIOR_COLORS: Record<BehaviorKind, string> = {
-    linear: '#e26a6a',
-    gravity: '#f5a35c',
-    homing: '#f2dc70',
-    accelerate: '#8fce6e',
-    decelerate: '#7fb3ec',
-    spiral: '#b98fe0',
-    sine: '#e07fc0',
-};
+// 友方弹幕单发命中伤害
+const PROJECTILE_HIT_DAMAGE = 1;
 
 class ProjectileManager {
     private projectiles: Projectile[] = [];
@@ -91,6 +76,7 @@ class ProjectileManager {
             phase: 0,
             sprite: config.sprite ?? null,
             behavior: config.behavior,
+            friendly: config.friendly,
             lifetime: config.lifetime ?? 0,
             age: 0,
             radius: config.radius ?? 12,
@@ -126,8 +112,12 @@ class ProjectileManager {
                 continue;
             }
 
-            // 玩家碰撞判定
-            if (this.checkPlayerCollision(projectile)) {
+            // 敌我碰撞判定：友方弹幕只判敌怪，敌方弹幕只判玩家
+            if (projectile.friendly) {
+                if (this.checkEntityCollision(projectile)) {
+                    projectile.dead = true;
+                }
+            } else if (this.checkPlayerCollision(projectile)) {
                 gameLevel.damagePlayer();
                 projectile.dead = true;
             }
@@ -139,10 +129,11 @@ class ProjectileManager {
 
     render(context: CanvasRenderingContext2D): void {
         for (const projectile of this.projectiles) {
-            if (projectile.sprite) {
-                const angle = Math.atan2(projectile.vy, projectile.vx);
-                drawSprite(context, projectile.sprite, projectile.x, projectile.y, projectile.radius / 12, projectile.radius / 12, false, angle);
-            }
+            // 无外观时按敌我落到默认素材
+            const sprite = projectile.sprite ?? (projectile.friendly ? PROJECTILE_FRIENDLY : PROJECTILE_ENEMY);
+            // 弹幕以其锚点旋转，旋转角度与基础速度方向一致
+            const angle = Math.atan2(projectile.vy, projectile.vx);
+            drawSprite(context, sprite, projectile.x, projectile.y, 1, 1, false, angle);
         }
     }
 
@@ -245,6 +236,23 @@ class ProjectileManager {
         const dx = projectile.x - clampedX;
         const dy = projectile.y - clampedY;
         return dx * dx + dy * dy <= projectile.radius * projectile.radius;
+    }
+
+    // 友方弹幕与敌怪碰撞盒（圆与矩形）判定，命中对敌怪造成伤害
+    private checkEntityCollision(projectile: Projectile): boolean {
+        for (const entity of entityManager.entityList) {
+            const left = entity.x + entity.hitbox.offsetX;
+            const top = entity.y + entity.hitbox.offsetY;
+            const clampedX = Math.max(left, Math.min(projectile.x, left + entity.hitbox.width));
+            const clampedY = Math.max(top, Math.min(projectile.y, top + entity.hitbox.height));
+            const dx = projectile.x - clampedX;
+            const dy = projectile.y - clampedY;
+            if (dx * dx + dy * dy <= projectile.radius * projectile.radius) {
+                entityManager.damage(entity, PROJECTILE_HIT_DAMAGE);
+                return true;
+            }
+        }
+        return false;
     }
 }
 

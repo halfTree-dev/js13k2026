@@ -2,6 +2,7 @@ import { inputManager } from './input';
 import { VIEW_WIDTH, VIEW_HEIGHT } from './main';
 import { drawSprite, UNICORN_RUN_FRAMES, UNICORN_LEAP, UNICORN_SINK } from './sprite';
 import { cityScenery } from './scenery';
+import { projectileManager } from './projectile';
 
 // 横向移动
 const PLAYER_MOVE_SPEED = 350;
@@ -27,6 +28,25 @@ const GROUND_SCROLL_SPEED = 420;
 // 地面刻度间距
 const GROUND_TICK_SPACING = 60;
 
+// 玩家碰撞盒偏移与尺寸（供弹幕/敌怪判定共用）
+export const PLAYER_HITBOX_OFFSET_X = -30;
+export const PLAYER_HITBOX_WIDTH = 65;
+export const PLAYER_HITBOX_OFFSET_Y = -75;
+export const PLAYER_HITBOX_HEIGHT = 85;
+
+// 玩家碰撞盒中心相对锚点的纵向偏移（供追踪弹幕瞄准）
+export const PLAYER_HITBOX_CENTER_Y = PLAYER_HITBOX_OFFSET_Y + PLAYER_HITBOX_HEIGHT / 2;
+
+// 友方弹幕发射冷却（秒）
+const PLAYER_SHOOT_COOLDOWN = 0.25;
+// 友方弹幕速度
+const FRIENDLY_PROJECTILE_SPEED = 900;
+// 发射点（独角兽角尖）相对玩家锚点偏移，各动作姿态通用
+const HORN_OFFSET_X = 42;
+const HORN_OFFSET_Y = -74;
+// 受击无敌时间（秒）
+const PLAYER_INVINCIBLE_TIME = 1.0;
+
 class GameLevel {
     playerX : number = 100;
     playerY : number = 720;
@@ -37,6 +57,9 @@ class GameLevel {
 
     playerJumpCount : number = 0;
 
+    shootCooldown : number = 0;
+    invincibleTimer : number = 0;
+
     groundY : number = 720;
 
     worldScroll : number = 0;
@@ -45,12 +68,21 @@ class GameLevel {
     }
 
     update(elapsedTime: number) {
+        // 计时器
+        this.shootCooldown = Math.max(0, this.shootCooldown - elapsedTime);
+        this.invincibleTimer = Math.max(0, this.invincibleTimer - elapsedTime);
+
         this.updateAnimation(elapsedTime);
         this.updateAction(elapsedTime);
         this.updatePhysics(elapsedTime);
     }
 
     damagePlayer(): void {
+        if (this.invincibleTimer > 0) {
+            return;
+        }
+        this.invincibleTimer = PLAYER_INVINCIBLE_TIME;
+        // TODO: 生命值/受击表现，待生命系统实现
         console.log('player damaged');
     }
 
@@ -91,6 +123,20 @@ class GameLevel {
                 this.playerJumpCount = 2;
             }
         }
+
+        // 发射友方弹幕
+        if (inputManager.isKeyJustPressed('KeyJ') && this.shootCooldown <= 0) {
+            projectileManager.spawn({
+                x: this.playerX + HORN_OFFSET_X,
+                y: this.playerY + HORN_OFFSET_Y,
+                vx: FRIENDLY_PROJECTILE_SPEED,
+                vy: 0,
+                behavior: { kind: 'linear' },
+                friendly: true,
+                lifetime: 2.5,
+            });
+            this.shootCooldown = PLAYER_SHOOT_COOLDOWN;
+        }
     }
 
     updatePhysics(elapsedTime: number) {
@@ -126,7 +172,7 @@ class GameLevel {
         context.fillStyle = '#3d3d3d';
         const groundOffset = this.worldScroll % GROUND_TICK_SPACING;
         for (let x = 0; x < VIEW_WIDTH; x += GROUND_TICK_SPACING) {
-            context.fillRect(x - groundOffset, this.groundY + 16, 4, 12);
+            context.fillRect(x - groundOffset, this.groundY + 14, 4, 12);
         }
 
         // 玩家动画
