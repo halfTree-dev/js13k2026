@@ -22,7 +22,7 @@ const PLAYER_ANIM_INTERVAL_FAST = 70e-3;
 const PLAYER_ANIM_INTERVAL_SLOW = 105e-3;
 const PLAYER_ANIM_SPEED_THRESHOLD = 10;
 
-// 地面滚动速度（即世界滚动速度，近景层 1.0x，远景/中景按系数折算）
+// 地面滚动速度
 const GROUND_SCROLL_SPEED = 420;
 // 地面刻度间距
 const GROUND_TICK_SPACING = 60;
@@ -48,6 +48,10 @@ class GameLevel {
         this.updateAnimation(elapsedTime);
         this.updateAction(elapsedTime);
         this.updatePhysics(elapsedTime);
+    }
+
+    damagePlayer(): void {
+        console.log('player damaged');
     }
 
     updateAnimation(elapsedTime: number) {
@@ -125,7 +129,7 @@ class GameLevel {
             context.fillRect(x - groundOffset, this.groundY + 16, 4, 12);
         }
 
-        // 玩家动画：地面奔跑；空中上升为上仰跳跃造型，下落为后仰下落造型
+        // 玩家动画
         if (this.playerY >= this.groundY - 1) {
             drawSprite(context, UNICORN_RUN_FRAMES[this.playerAnimationIndex], this.playerX, this.playerY, 1);
         } else if (this.playerVelocityY < 0) {

@@ -1,4 +1,5 @@
 import { gameLevel } from './level';
+import { projectileManager } from './projectile';
 import { inputManager } from './input';
 
 // 虚拟画布尺寸
@@ -55,6 +56,7 @@ function frame(nowTime: number): void {
 
 function gameUpdate(elapsedTime: number): void {
     gameLevel.update(elapsedTime);
+    projectileManager.update(elapsedTime);
     inputManager.endFrame();
 }
 
@@ -78,6 +80,8 @@ function gameRender(): void {
     context.fillRect(0, 0, VIEW_WIDTH, VIEW_HEIGHT);
 
     gameLevel.render(context);
+
+    projectileManager.render(context);
 
     context.restore();
 }
