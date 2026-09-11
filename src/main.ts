@@ -1,4 +1,5 @@
 import { gameLevel } from './level';
+import { player } from './player';
 import { entityManager } from './entity';
 import { projectileManager } from './projectile';
 import { inputManager } from './input';
@@ -56,7 +57,9 @@ function frame(nowTime: number): void {
 }
 
 function gameUpdate(elapsedTime: number): void {
+    // 世界滚动
     gameLevel.update(elapsedTime);
+    player.update(elapsedTime);
     // 敌怪更新在玩家之后、弹幕之前，保证友方弹幕对最新敌怪位置判定
     entityManager.update(elapsedTime);
     projectileManager.update(elapsedTime);
@@ -84,9 +87,14 @@ function gameRender(): void {
 
     gameLevel.render(context);
 
+    player.render(context);
+
     // 敌怪绘制在玩家之上，弹幕最上
     entityManager.render(context);
     projectileManager.render(context);
+
+    // UI 绘制在最顶层
+    player.renderUI(context);
 
     context.restore();
 }

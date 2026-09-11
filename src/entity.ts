@@ -1,4 +1,4 @@
-import { gameLevel, PLAYER_HITBOX_OFFSET_X, PLAYER_HITBOX_WIDTH, PLAYER_HITBOX_OFFSET_Y, PLAYER_HITBOX_HEIGHT } from './level';
+import { player, PLAYER_HITBOX_OFFSET_X, PLAYER_HITBOX_WIDTH, PLAYER_HITBOX_OFFSET_Y, PLAYER_HITBOX_HEIGHT } from './player';
 import { VIEW_WIDTH } from './main';
 import { Sprite, drawSprite, ENEMY_PLACEHOLDER } from './sprite';
 
@@ -30,7 +30,7 @@ interface Entity {
     age: number;
     // 生命值
     hitPoints: number;
-    // 自定义碰撞盒，相对实体锚点
+    // 碰撞盒，相对实体锚点
     hitbox: EntityHitbox;
     // 回收标记
     dead: boolean;
@@ -121,7 +121,7 @@ class EntityManager {
 
             // 玩家碰撞判定
             if (this.checkPlayerCollision(entity)) {
-                gameLevel.damagePlayer();
+                player.damage();
             }
         }
 
@@ -157,8 +157,8 @@ class EntityManager {
 
     // 敌怪碰撞盒与玩家碰撞盒（AABB）相交测试
     private checkPlayerCollision(entity: Entity): boolean {
-        const left = gameLevel.playerX + PLAYER_HITBOX_OFFSET_X;
-        const top = gameLevel.playerY + PLAYER_HITBOX_OFFSET_Y;
+        const left = player.playerX + PLAYER_HITBOX_OFFSET_X;
+        const top = player.playerY + PLAYER_HITBOX_OFFSET_Y;
         const entityLeft = entity.x + entity.hitbox.offsetX;
         const entityTop = entity.y + entity.hitbox.offsetY;
         return entityLeft < left + PLAYER_HITBOX_WIDTH && entityLeft + entity.hitbox.width > left

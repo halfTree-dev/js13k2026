@@ -1,4 +1,4 @@
-import { gameLevel, PLAYER_HITBOX_OFFSET_X, PLAYER_HITBOX_WIDTH, PLAYER_HITBOX_OFFSET_Y, PLAYER_HITBOX_HEIGHT, PLAYER_HITBOX_CENTER_Y } from './level';
+import { player, PLAYER_HITBOX_OFFSET_X, PLAYER_HITBOX_WIDTH, PLAYER_HITBOX_OFFSET_Y, PLAYER_HITBOX_HEIGHT, PLAYER_HITBOX_CENTER_Y } from './player';
 import { VIEW_WIDTH, VIEW_HEIGHT } from './main';
 import { entityManager } from './entity';
 import { Sprite, drawSprite, PROJECTILE_FRIENDLY, PROJECTILE_ENEMY } from './sprite';
@@ -118,7 +118,7 @@ class ProjectileManager {
                     projectile.dead = true;
                 }
             } else if (this.checkPlayerCollision(projectile)) {
-                gameLevel.damagePlayer();
+                player.damage();
                 projectile.dead = true;
             }
         }
@@ -151,8 +151,8 @@ class ProjectileManager {
                 if (speed > 0) {
                     const currentAngle = Math.atan2(projectile.vy, projectile.vx);
                     const targetAngle = Math.atan2(
-                        gameLevel.playerY + PLAYER_HITBOX_CENTER_Y - projectile.baseY,
-                        gameLevel.playerX - projectile.baseX,
+                        player.playerY + PLAYER_HITBOX_CENTER_Y - projectile.baseY,
+                        player.playerX - projectile.baseX,
                     );
                     let angleDelta = targetAngle - currentAngle;
                     while (angleDelta > Math.PI) {
@@ -229,8 +229,8 @@ class ProjectileManager {
 
     // 撞击判定
     private checkPlayerCollision(projectile: Projectile): boolean {
-        const left = gameLevel.playerX + PLAYER_HITBOX_OFFSET_X;
-        const top = gameLevel.playerY + PLAYER_HITBOX_OFFSET_Y;
+        const left = player.playerX + PLAYER_HITBOX_OFFSET_X;
+        const top = player.playerY + PLAYER_HITBOX_OFFSET_Y;
         const clampedX = Math.max(left, Math.min(projectile.x, left + PLAYER_HITBOX_WIDTH));
         const clampedY = Math.max(top, Math.min(projectile.y, top + PLAYER_HITBOX_HEIGHT));
         const dx = projectile.x - clampedX;
