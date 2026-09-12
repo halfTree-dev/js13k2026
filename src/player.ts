@@ -1,5 +1,8 @@
+// player.ts
+// 玩家相关逻辑
+
 import { inputManager } from './input';
-import { VIEW_WIDTH, VIEW_HEIGHT } from './main';
+import { VIEW_WIDTH, VIEW_HEIGHT } from './view';
 import { drawSprite, UNICORN_RUN_FRAMES, UNICORN_LEAP, UNICORN_SINK } from './sprite';
 import { projectileManager } from './projectile';
 
@@ -14,6 +17,8 @@ const PLAYER_DOUBLE_JUMP_VELOCITY = -780;
 // 重力
 const PLAYER_GRAVITY = 2600;
 const PLAYER_HOLD_GRAVITY = 1200;
+// 按住 KeyS 时的额外下坠加速度（仅空中生效）
+const PLAYER_FAST_FALL_GRAVITY = 3000;
 // 最大下落速度
 const PLAYER_MAX_FALL_SPEED = 1500;
 // 水平边界
@@ -35,12 +40,12 @@ export const PLAYER_HITBOX_HEIGHT = 85;
 export const PLAYER_HITBOX_CENTER_Y = PLAYER_HITBOX_OFFSET_Y + PLAYER_HITBOX_HEIGHT / 2;
 
 // 友方弹幕发射冷却
-const PLAYER_SHOOT_COOLDOWN = 0.25;
+export const PLAYER_SHOOT_COOLDOWN = 0.25;
 // 友方弹幕速度
 const FRIENDLY_PROJECTILE_SPEED = 900;
 // 独角兽角尖相对玩家锚点偏移
-const HORN_OFFSET_X = 42;
-const HORN_OFFSET_Y = -74;
+const HORN_OFFSET_X = 40;
+const HORN_OFFSET_Y = -77;
 // 受击无敌时间
 const PLAYER_INVINCIBLE_TIME = 1.0;
 
@@ -50,15 +55,14 @@ const PLAYER_HIT_POINT_REGEN = 0.1;
 // 颜色条上限
 const COLOR_POINT_MAX = 1;
 
-const COLOR_POINT_DEMO_GROWTH = 0.03;
 const COLOR_POINT_BAR_COLOR = '#7fb3ec';
 
-// 生命值 UI 几何：槽宽/槽高/倾斜量/间距
+// 生命值 UI
 const HP_SLOT_WIDTH = 56;
 const HP_SLOT_HEIGHT = 22;
 const HP_SLOT_SKEW = 14;
 const HP_SLOT_GAP = 10;
-// 颜色条 UI 几何：段宽/段高/倾斜量/段距/段数
+// 颜色条 UI
 const COLOR_SEG_WIDTH = 26;
 const COLOR_SEG_HEIGHT = 22;
 const COLOR_SEG_SKEW = -12;
@@ -95,13 +99,14 @@ class Player {
 
     shootCooldown : number = 0;
     invincibleTimer : number = 0;
+    invulnerable : boolean = false;
 
     // 生命值
     hitPoint : number = PLAYER_MAX_HIT_POINT;
     // 颜色条
     colorPoint : number = 0;
 
-    update(elapsedTime: number) {
+    update(elapsedTime: number, inputEnabled = true) {
         // 计时器
         this.shootCooldown = Math.max(0, this.shootCooldown - elapsedTime);
         this.invincibleTimer = Math.max(0, this.invincibleTimer - elapsedTime);
@@ -109,19 +114,25 @@ class Player {
         // 生命值恢复
         this.hitPoint = Math.min(PLAYER_MAX_HIT_POINT, this.hitPoint + PLAYER_HIT_POINT_REGEN * elapsedTime);
 
-        this.colorPoint = Math.min(COLOR_POINT_MAX, this.colorPoint + COLOR_POINT_DEMO_GROWTH * elapsedTime);
-
         this.updateAnimation(elapsedTime);
-        this.updateAction(elapsedTime);
+        if (inputEnabled) {
+            this.updateAction(elapsedTime);
+        } else {
+            this.playerVelocityX = 0;
+        }
         this.updatePhysics(elapsedTime);
     }
 
     damage(): void {
-        if (this.invincibleTimer > 0) {
+        if (this.invulnerable || this.invincibleTimer > 0) {
             return;
         }
         this.invincibleTimer = PLAYER_INVINCIBLE_TIME;
         this.hitPoint = Math.max(0, this.hitPoint - 1);
+    }
+
+    addColor(amount: number): void {
+        this.colorPoint = Math.min(COLOR_POINT_MAX, Math.max(0, this.colorPoint + amount));
     }
 
     updateAnimation(elapsedTime: number) {
@@ -159,13 +170,18 @@ class Player {
             }
         }
 
-        // 发射友方弹幕
-        if (inputManager.isKeyJustPressed('KeyJ') && this.shootCooldown <= 0) {
+        // 发射友方弹幕（单击单发，朝鼠标方向，受冷却限制防连点）
+        if (inputManager.isMouseLeftPressed() && this.shootCooldown <= 0) {
+            const hornX = this.playerX + HORN_OFFSET_X;
+            const hornY = this.playerY + HORN_OFFSET_Y;
+            const deltaX = inputManager.mouseX - hornX;
+            const deltaY = inputManager.mouseY - hornY;
+            const distance = Math.hypot(deltaX, deltaY) || 1;
             projectileManager.spawn({
-                x: this.playerX + HORN_OFFSET_X,
-                y: this.playerY + HORN_OFFSET_Y,
-                vx: FRIENDLY_PROJECTILE_SPEED,
-                vy: 0,
+                x: hornX,
+                y: hornY,
+                vx: (deltaX / distance) * FRIENDLY_PROJECTILE_SPEED,
+                vy: (deltaY / distance) * FRIENDLY_PROJECTILE_SPEED,
                 behavior: { kind: 'linear' },
                 friendly: true,
                 lifetime: 2.5,
@@ -175,10 +191,12 @@ class Player {
     }
 
     updatePhysics(elapsedTime: number) {
-        // 按住 KeyW 时受弱重力
-        const gravity = this.playerVelocityY < 0 && inputManager.isKeyDown('KeyW') ? PLAYER_HOLD_GRAVITY : PLAYER_GRAVITY;
+        // 纵向行动
+        let gravity = this.playerVelocityY < 0 && inputManager.isKeyDown('KeyW') ? PLAYER_HOLD_GRAVITY : PLAYER_GRAVITY;
+        if (this.playerY < GROUND_Y - 1 && inputManager.isKeyDown('KeyS')) {
+            gravity += PLAYER_FAST_FALL_GRAVITY;
+        }
         this.playerVelocityY += gravity * elapsedTime;
-        // 最大下落速度
         this.playerVelocityY = Math.min(this.playerVelocityY, PLAYER_MAX_FALL_SPEED);
 
         // 结算速度
@@ -196,7 +214,7 @@ class Player {
     }
 
     render(context: CanvasRenderingContext2D) {
-        // 玩家动画：地面奔跑；空中上升为上仰跳跃造型，下落为后仰下落造型
+        // 玩家动画
         if (this.playerY >= GROUND_Y - 1) {
             drawSprite(context, UNICORN_RUN_FRAMES[this.playerAnimationIndex], this.playerX, this.playerY, 1);
         } else if (this.playerVelocityY < 0) {
@@ -224,7 +242,6 @@ class Player {
             if (i < fullCount) {
                 drawParallelogram(context, x, y, HP_SLOT_WIDTH, HP_SLOT_HEIGHT, HP_SLOT_SKEW, HP_SLOT_FILL);
             } else if (i === fullCount && fraction > 0) {
-                // 小数槽
                 context.save();
                 context.globalAlpha = PARTIAL_SLOT_ALPHA;
                 drawParallelogram(context, x, y, HP_SLOT_WIDTH * fraction, HP_SLOT_HEIGHT, HP_SLOT_SKEW, HP_SLOT_FILL);

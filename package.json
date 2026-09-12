@@ -6,7 +6,8 @@
   "scripts": {
     "build": "node build.ts",
     "game": "start build/index.html",
-    "editor": "start tools/editor.html"
+    "editor": "start tools/editor.html",
+    "smoke": "esbuild tools/smoke.ts --bundle --format=cjs --outfile=node_modules/.cache/smoke.js --log-level=silent && node node_modules/.cache/smoke.js"
   },
   "keywords": [],
   "author": "",

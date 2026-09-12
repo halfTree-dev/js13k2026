@@ -1,7 +1,11 @@
-import { VIEW_WIDTH } from './main';
+// scenery.ts
+// 管理背景元素
+
+import { VIEW_WIDTH } from './view';
 import { Sprite, drawSprite, CITY_FAR_SKYLINE, CITY_MID_FAR_SKYLINE, CITY_VIADUCT,
     PROP_BILLBOARD, PROP_TRAFFIC_SIGN, PROP_STREET_LAMP, PROP_TRAFFIC_CONE,
     PROP_TAXI, PROP_BARRIER, PROP_POPLAR, PROP_BUSH, PROP_BIKE,
+    PROP_UTILITY_POLE, PROP_TRASH_BINS,
     PROP_PALETTE_RED, PROP_PALETTE_ORANGE, PROP_PALETTE_YELLOW, PROP_PALETTE_GREEN, PROP_PALETTE_BLUE } from './sprite';
 
 // 滚动系数
@@ -21,7 +25,6 @@ const MID_FAR_PHASE = 640;
 const MID_VIADUCT_WIDTH = 185;
 
 // 近景
-const NEAR_COLORED = false;
 const NEAR_SPAWN_MARGIN = 720;
 
 interface NearProp {
@@ -31,19 +34,29 @@ interface NearProp {
     palette: string[];
 }
 
+// 已恢复颜色的色板组（按数组引用比较）
+const restoredPalettes = new Set<string[]>();
+
+// 恢复指定色板组的近景颜色（阶段完成时调用）
+function restorePropPalette(palette: string[]): void {
+    restoredPalettes.add(palette);
+}
+
 function tinted(sprite: Sprite, palette: string[]): Sprite {
-    return NEAR_COLORED ? { ...sprite, palette } : sprite;
+    return restoredPalettes.has(palette) ? { ...sprite, palette } : sprite;
 }
 
 const NEAR_PROPS: NearProp[] = [
-    { sprite: PROP_BILLBOARD, spacing: 480, scale: 1, palette: PROP_PALETTE_RED },
-    { sprite: PROP_TRAFFIC_SIGN, spacing: 150, scale: 1, palette: PROP_PALETTE_RED },
-    { sprite: PROP_STREET_LAMP, spacing: 260, scale: 1, palette: PROP_PALETTE_ORANGE },
-    { sprite: PROP_TRAFFIC_CONE, spacing: 120, scale: 1, palette: PROP_PALETTE_ORANGE },
-    { sprite: PROP_TAXI, spacing: 330, scale: 0.85, palette: PROP_PALETTE_YELLOW },
-    { sprite: PROP_BARRIER, spacing: 300, scale: 1, palette: PROP_PALETTE_YELLOW },
-    { sprite: PROP_POPLAR, spacing: 240, scale: 1, palette: PROP_PALETTE_GREEN },
-    { sprite: PROP_BUSH, spacing: 240, scale: 1, palette: PROP_PALETTE_GREEN },
+    { sprite: PROP_BILLBOARD, spacing: 480, scale: 0.65, palette: PROP_PALETTE_RED },
+    { sprite: PROP_TRAFFIC_SIGN, spacing: 150, scale: 0.65, palette: PROP_PALETTE_RED },
+    { sprite: PROP_STREET_LAMP, spacing: 260, scale: 0.65, palette: PROP_PALETTE_ORANGE },
+    { sprite: PROP_TRAFFIC_CONE, spacing: 120, scale: 0.65, palette: PROP_PALETTE_ORANGE },
+    { sprite: PROP_UTILITY_POLE, spacing: 300, scale: 0.65, palette: PROP_PALETTE_ORANGE },
+    { sprite: PROP_TAXI, spacing: 330, scale: 0.65, palette: PROP_PALETTE_YELLOW },
+    { sprite: PROP_BARRIER, spacing: 300, scale: 0.65, palette: PROP_PALETTE_YELLOW },
+    { sprite: PROP_POPLAR, spacing: 240, scale: 0.65, palette: PROP_PALETTE_GREEN },
+    { sprite: PROP_BUSH, spacing: 240, scale: 0.65, palette: PROP_PALETTE_GREEN },
+    { sprite: PROP_TRASH_BINS, spacing: 200, scale: 0.65, palette: PROP_PALETTE_GREEN },
     { sprite: PROP_BIKE, spacing: 140, scale: 0.65, palette: PROP_PALETTE_BLUE },
 ];
 
@@ -108,4 +121,4 @@ class CityScenery {
 }
 
 const cityScenery = new CityScenery();
-export { cityScenery };
+export { cityScenery, restorePropPalette, restoredPalettes };

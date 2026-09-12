@@ -1,10 +1,11 @@
-// 输入信息快照
+// input.ts
+// 管理用户输入
+
+import { screenToView } from './main';
+
 export interface InputInfo {
-    // 按住
     downCodes: ReadonlySet<string>;
-    // 按下
     pressedCodes: ReadonlySet<string>;
-    // 松开
     releasedCodes: ReadonlySet<string>;
 }
 
@@ -12,6 +13,11 @@ class InputManager {
     downCodes: Set<string> = new Set();
     pressedCodes: Set<string> = new Set();
     releasedCodes: Set<string> = new Set();
+
+    mouseX: number = 640;
+    mouseY: number = 400;
+    mouseLeftDown: boolean = false;
+    mouseLeftPressed: boolean = false;
 
     constructor() {
         addEventListener('keydown', (e: KeyboardEvent) => {
@@ -24,9 +30,31 @@ class InputManager {
             this.downCodes.delete(e.code);
             this.releasedCodes.add(e.code);
         });
+        addEventListener('mousedown', (e: MouseEvent) => {
+            this.updateMousePosition(e);
+            if (e.button === 0) {
+                this.mouseLeftDown = true;
+                this.mouseLeftPressed = true;
+            }
+        });
+        addEventListener('mouseup', (e: MouseEvent) => {
+            if (e.button === 0) {
+                this.mouseLeftDown = false;
+            }
+        });
+        addEventListener('mousemove', (e: MouseEvent) => {
+            this.updateMousePosition(e);
+        });
         addEventListener('blur', () => {
             this.downCodes.clear();
+            this.mouseLeftDown = false;
         });
+    }
+
+    private updateMousePosition(e: MouseEvent): void {
+        const position = screenToView(e.clientX, e.clientY);
+        this.mouseX = position.x;
+        this.mouseY = position.y;
     }
 
     isKeyDown(code: string): boolean {
@@ -41,6 +69,14 @@ class InputManager {
         return this.releasedCodes.has(code);
     }
 
+    isMouseLeftDown(): boolean {
+        return this.mouseLeftDown;
+    }
+
+    isMouseLeftPressed(): boolean {
+        return this.mouseLeftPressed;
+    }
+
     getInfo(): InputInfo {
         return {
             downCodes: this.downCodes,
@@ -52,6 +88,7 @@ class InputManager {
     endFrame(): void {
         this.pressedCodes.clear();
         this.releasedCodes.clear();
+        this.mouseLeftPressed = false;
     }
 }
 

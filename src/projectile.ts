@@ -1,5 +1,8 @@
+// projectile.ts
+// 管理弹幕系统
+
 import { player, PLAYER_HITBOX_OFFSET_X, PLAYER_HITBOX_WIDTH, PLAYER_HITBOX_OFFSET_Y, PLAYER_HITBOX_HEIGHT, PLAYER_HITBOX_CENTER_Y } from './player';
-import { VIEW_WIDTH, VIEW_HEIGHT } from './main';
+import { VIEW_WIDTH, VIEW_HEIGHT } from './view';
 import { entityManager } from './entity';
 import { Sprite, drawSprite, PROJECTILE_FRIENDLY, PROJECTILE_ENEMY } from './sprite';
 
@@ -112,7 +115,7 @@ class ProjectileManager {
                 continue;
             }
 
-            // 敌我碰撞判定：友方弹幕只判敌怪，敌方弹幕只判玩家
+            // 碰撞判定
             if (projectile.friendly) {
                 if (this.checkEntityCollision(projectile)) {
                     projectile.dead = true;
@@ -129,9 +132,7 @@ class ProjectileManager {
 
     render(context: CanvasRenderingContext2D): void {
         for (const projectile of this.projectiles) {
-            // 无外观时按敌我落到默认素材
             const sprite = projectile.sprite ?? (projectile.friendly ? PROJECTILE_FRIENDLY : PROJECTILE_ENEMY);
-            // 弹幕以其锚点旋转，旋转角度与基础速度方向一致
             const angle = Math.atan2(projectile.vy, projectile.vx);
             drawSprite(context, sprite, projectile.x, projectile.y, 1, 1, false, angle);
         }
@@ -241,6 +242,9 @@ class ProjectileManager {
     // 友方弹幕与敌怪碰撞盒（圆与矩形）判定，命中对敌怪造成伤害
     private checkEntityCollision(projectile: Projectile): boolean {
         for (const entity of entityManager.entityList) {
+            if (entity.dead) {
+                continue;
+            }
             const left = entity.x + entity.hitbox.offsetX;
             const top = entity.y + entity.hitbox.offsetY;
             const clampedX = Math.max(left, Math.min(projectile.x, left + entity.hitbox.width));
