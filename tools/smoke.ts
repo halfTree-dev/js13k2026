@@ -129,8 +129,8 @@ async function main(): Promise<void> {
     inputManager.mouseLeftDown = true;
     step(2);
     inputManager.mouseLeftDown = false;
-    assert(spawnCounts.friendlyShots >= 10 && spawnCounts.friendlyShots <= 12,
-        `按住左键 2 秒发射约 11 发（实际 ${spawnCounts.friendlyShots}）`);
+    assert(spawnCounts.friendlyShots >= 11 && spawnCounts.friendlyShots <= 13,
+        `按住左键 2 秒发射约 12 发（实际 ${spawnCounts.friendlyShots}）`);
 
     // 7. 关卡双计时器生成与关键数值
     spawnCounts.background = 0;
@@ -139,7 +139,7 @@ async function main(): Promise<void> {
     assert(spawnCounts.background > 5, `60 秒内障碍计时器持续生成（实际 ${spawnCounts.background}）`);
     assert(spawnCounts.front >= 10, `60 秒内敌怪计时器持续生成（实际 ${spawnCounts.front}）`);
     const obstacle = entityManager.entityList.find(entity => entity.background);
-    assert(obstacle !== undefined && obstacle.hitPoints === 4, '障碍生命值为 4（可击破）');
+    assert(obstacle !== undefined && obstacle.hitPoints === 999, '障碍生命值为 999（不可击破）');
     // 敌怪提速后在场时间短，直接生成一波 0 号敌怪，取队尾实体做数值断言
     spawnEnemyWave(ENEMY_DEFS[0]);
     const enemy = entityManager.entityList[entityManager.entityList.length - 1];

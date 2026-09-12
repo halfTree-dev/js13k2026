@@ -36,8 +36,8 @@ const STAGES: StageConfig[] = [
 // 击杀颜色奖励（统一 1/55 颜色条）
 const KILL_COLOR_REWARD = 1 / 55;
 
-// 障碍物生命值（可被击破）
-const OBSTACLE_HIT_POINT = 4;
+// 障碍物生命值（不可被弹幕击破）
+const OBSTACLE_HIT_POINT = 999;
 
 // 水平移动型敌怪生成高度带
 const ENEMY_ROW_Y_MIN = 100;
@@ -108,13 +108,13 @@ const ENEMY_DEFS: EnemyDef[] = [
     {
         sprite: ENEMY_MOTHLING, formation: { count: 5, kind: 'row', spacing: 120 }, vx: -160 * 2.2, vy: 0,
         behavior: { kind: 'sine', amplitude: 40, frequency: Math.PI },
-        hitPoints: 3, hitbox: MOTHLING_HITBOX, attacks: [], coeff: 0.1, timerAdd: 5, flipX: false, grounded: false,
+        hitPoints: 3, hitbox: MOTHLING_HITBOX, attacks: [], coeff: 0.1, timerAdd: 5 * 0.7 * 0.6, flipX: false, grounded: false,
     },
     // 1 飞蛾群：慢速左移 + 纵向大幅正弦
     {
         sprite: ENEMY_MOTHLING, formation: { count: 5, kind: 'row', spacing: 120 }, vx: -100 * 2.2, vy: 0,
         behavior: { kind: 'sine', amplitude: 120, frequency: Math.PI * 2 / 2.6 },
-        hitPoints: 3, hitbox: MOTHLING_HITBOX, attacks: [], coeff: 0.1, timerAdd: 6, flipX: false, grounded: false,
+        hitPoints: 3, hitbox: MOTHLING_HITBOX, attacks: [], coeff: 0.1, timerAdd: 6 * 0.7 * 0.6, flipX: false, grounded: false,
     },
     // 2 警卫无人机横排：对玩家发射加速弹/螺旋弹/减速弹（三选一）
     {
@@ -122,11 +122,11 @@ const ENEMY_DEFS: EnemyDef[] = [
         behavior: { kind: 'linear' },
         hitPoints: 3, hitbox: DRONE_HITBOX,
         attacks: [
-            { kind: 'aimed', shot: 'accel', interval: 3.5 * 0.6, speed: 260 * 1.8, accel: 500, maxSpeed: 700 * 1.8, firstDelay: 1.8 },
-            { kind: 'aimed', shot: 'spiral', interval: 3.5 * 0.6, speed: 300 * 1.8, spiralRadius: 40, spiralOmega: 5, firstDelay: 1.8 },
-            { kind: 'aimed', shot: 'decel', interval: 3.5 * 0.6, speed: 480 * 1.8, accel: 300, minSpeed: 160 * 1.8, firstDelay: 1.8 },
+            { kind: 'aimed', shot: 'accel', interval: 3.5 * 0.6, speed: 260 * 1.8, accel: 500, maxSpeed: 700 * 1.8 },
+            { kind: 'aimed', shot: 'spiral', interval: 3.5 * 0.6, speed: 300 * 1.8, spiralRadius: 40, spiralOmega: 5 },
+            { kind: 'aimed', shot: 'decel', interval: 3.5 * 0.6, speed: 480 * 1.8, accel: 300, minSpeed: 160 * 1.8 },
         ],
-        coeff: 0.2, timerAdd: 8, flipX: false, grounded: false,
+        coeff: 0.2, timerAdd: 8 * 0.7 * 0.6, flipX: false, grounded: false,
     },
     // 3 警卫无人机纵列：下落 + 横向正弦，对玩家发射匀速弹/螺旋弹
     {
@@ -134,10 +134,10 @@ const ENEMY_DEFS: EnemyDef[] = [
         behavior: { kind: 'sine', axis: 'x', amplitude: 40, frequency: Math.PI },
         hitPoints: 3, hitbox: DRONE_HITBOX,
         attacks: [
-            { kind: 'aimed', shot: 'linear', interval: 3.5 * 0.6, speed: 320 * 1.8, firstDelay: 2 },
-            { kind: 'aimed', shot: 'spiral', interval: 3.5 * 0.6, speed: 300 * 1.8, spiralRadius: 36, spiralOmega: 5, firstDelay: 2 },
+            { kind: 'aimed', shot: 'linear', interval: 3.5 * 0.6, speed: 320 * 1.8 },
+            { kind: 'aimed', shot: 'spiral', interval: 3.5 * 0.6, speed: 300 * 1.8, spiralRadius: 36, spiralOmega: 5 },
         ],
-        coeff: 0.2, timerAdd: 8, flipX: false, grounded: false,
+        coeff: 0.2, timerAdd: 8 * 0.7 * 0.6, flipX: false, grounded: false,
     },
     // 4 警卫无人机纵列：直线下落，对玩家加速弹/全向重力散射
     {
@@ -145,22 +145,22 @@ const ENEMY_DEFS: EnemyDef[] = [
         behavior: { kind: 'linear' },
         hitPoints: 3, hitbox: DRONE_HITBOX,
         attacks: [
-            { kind: 'aimed', shot: 'accel', interval: 3.5 * 0.6, speed: 200 * 1.8, accel: 420, maxSpeed: 640 * 1.8, firstDelay: 2 },
-            { kind: 'lob', interval: 4 * 0.6, speed: 340 * 1.4, gravity: 900, count: 3, firstDelay: 2 },
+            { kind: 'aimed', shot: 'accel', interval: 3.5 * 0.6, speed: 200 * 1.8, accel: 420, maxSpeed: 640 * 1.8 },
+            { kind: 'lob', interval: 4 * 0.6, speed: 340 * 1.4, gravity: 900, count: 3 },
         ],
-        coeff: 0.3, timerAdd: 9, flipX: false, grounded: false,
+        coeff: 0.3, timerAdd: 9 * 0.7 * 0.6, flipX: false, grounded: false,
     },
     // 5 大型蜘蛛：贴地高跳
     {
         sprite: ENEMY_SPIDER, formation: { count: 5, kind: 'row', spacing: 120 }, vx: -120 * 2.2, vy: 0,
         behavior: { kind: 'hop', amplitude: 250, frequency: Math.PI * 2 / 1.4 },
-        hitPoints: 2, hitbox: SPIDER_HITBOX, attacks: [], coeff: 0.2, timerAdd: 10, flipX: false, grounded: true,
+        hitPoints: 2, hitbox: SPIDER_HITBOX, attacks: [], coeff: 0.2, timerAdd: 10 * 0.7 * 0.6, flipX: false, grounded: true,
     },
     // 6 大型蜘蛛：贴地快移小跳
     {
         sprite: ENEMY_SPIDER, formation: { count: 5, kind: 'row', spacing: 160 }, vx: -180 * 2.2, vy: 0,
         behavior: { kind: 'hop', amplitude: 60, frequency: Math.PI * 2 / 1.1 },
-        hitPoints: 3, hitbox: SPIDER_HITBOX, attacks: [], coeff: 0.3, timerAdd: 9, flipX: false, grounded: true,
+        hitPoints: 3, hitbox: SPIDER_HITBOX, attacks: [], coeff: 0.3, timerAdd: 9 * 0.7 * 0.6, flipX: false, grounded: true,
     },
     // 7 胡蜂横排：快速左移，对玩家匀速/追踪弹
     {
@@ -168,10 +168,10 @@ const ENEMY_DEFS: EnemyDef[] = [
         behavior: { kind: 'linear' },
         hitPoints: 2, hitbox: WASP_HITBOX,
         attacks: [
-            { kind: 'aimed', shot: 'linear', interval: 4 * 0.6, speed: 380 * 1.8, firstDelay: 1.6 },
-            { kind: 'aimed', shot: 'homing', interval: 4 * 0.6, speed: 300 * 1.8, turnRate: 2.2 * 0.25, firstDelay: 1.6 },
+            { kind: 'aimed', shot: 'linear', interval: 4 * 0.6, speed: 380 * 1.8 },
+            { kind: 'aimed', shot: 'homing', interval: 4 * 0.6, speed: 300 * 1.8, turnRate: 2.2 * 0.25 },
         ],
-        coeff: 0.3, timerAdd: 8, flipX: true, grounded: false,
+        coeff: 0.3, timerAdd: 8 * 0.7 * 0.6, flipX: true, grounded: false,
     },
     // 8 胡蜂纵列：缓降 + 横向正弦，对玩家匀速/追踪弹
     {
@@ -179,10 +179,10 @@ const ENEMY_DEFS: EnemyDef[] = [
         behavior: { kind: 'sine', axis: 'x', amplitude: 40, frequency: Math.PI },
         hitPoints: 4, hitbox: WASP_HITBOX,
         attacks: [
-            { kind: 'aimed', shot: 'linear', interval: 4 * 0.6, speed: 380 * 1.8, firstDelay: 2 },
-            { kind: 'aimed', shot: 'homing', interval: 4 * 0.6, speed: 300 * 1.8, turnRate: 2.2 * 0.25, firstDelay: 2 },
+            { kind: 'aimed', shot: 'linear', interval: 4 * 0.6, speed: 380 * 1.8 },
+            { kind: 'aimed', shot: 'homing', interval: 4 * 0.6, speed: 300 * 1.8, turnRate: 2.2 * 0.25 },
         ],
-        coeff: 0.5, timerAdd: 10, flipX: false, grounded: false,
+        coeff: 0.5, timerAdd: 10 * 0.7 * 0.6, flipX: false, grounded: false,
     },
     // 9 胡蜂横排：左移 + 纵向正弦，对玩家三枚加速弹/追踪弹
     {
@@ -190,18 +190,18 @@ const ENEMY_DEFS: EnemyDef[] = [
         behavior: { kind: 'sine', amplitude: 50, frequency: Math.PI },
         hitPoints: 3, hitbox: WASP_HITBOX,
         attacks: [
-            { kind: 'aimed', shot: 'accel', count: 3, spreadDeg: 24, interval: 4 * 0.6, speed: 240 * 1.8, accel: 450, maxSpeed: 660 * 1.8, firstDelay: 1.6 },
-            { kind: 'aimed', shot: 'homing', interval: 4 * 0.6, speed: 300 * 1.8, turnRate: 2.2 * 0.25, firstDelay: 1.6 },
+            { kind: 'aimed', shot: 'accel', count: 3, spreadDeg: 24, interval: 4 * 0.6, speed: 240 * 1.8, accel: 450, maxSpeed: 660 * 1.8 },
+            { kind: 'aimed', shot: 'homing', interval: 4 * 0.6, speed: 300 * 1.8, turnRate: 2.2 * 0.25 },
         ],
-        coeff: 0.5, timerAdd: 10, flipX: true, grounded: false,
+        coeff: 0.5, timerAdd: 10 * 0.7 * 0.6, flipX: true, grounded: false,
     },
     // 10 喷吐花：扎根地面随世界滚动，向天空随机角抛射重力弹
     {
         sprite: ENEMY_SPITTER, formation: { count: 5, kind: 'row', spacing: 160 }, vx: -GROUND_SCROLL_SPEED, vy: 0,
         behavior: { kind: 'linear' },
         hitPoints: 4, hitbox: SPITTER_HITBOX,
-        attacks: [{ kind: 'lob', skyward: true, interval: 4 * 0.6, speed: 460 * 1.4, gravity: 900, firstDelay: 1.5 }],
-        coeff: 0.3, timerAdd: 14, flipX: false, grounded: true,
+        attacks: [{ kind: 'lob', skyward: true, interval: 4 * 0.6, speed: 460 * 1.4, gravity: 900 }],
+        coeff: 0.3, timerAdd: 14 * 0.7 * 0.6, flipX: false, grounded: true,
     },
     // 11 涡流蜻蜓：慢速左移 + 纵向正弦，对玩家螺旋弹/六向环形弹
     {
@@ -209,10 +209,10 @@ const ENEMY_DEFS: EnemyDef[] = [
         behavior: { kind: 'sine', amplitude: 60, frequency: Math.PI * 2 / 2.4 },
         hitPoints: 5, hitbox: DRAGONFLY_HITBOX,
         attacks: [
-            { kind: 'aimed', shot: 'spiral', interval: 5 * 0.6, speed: 280 * 1.8, spiralRadius: 32, spiralOmega: 4.5, firstDelay: 1.5 },
-            { kind: 'ring', interval: 5 * 0.6, count: 6, speed: 260 * 1.8, firstDelay: 1.5 },
+            { kind: 'aimed', shot: 'spiral', interval: 5 * 0.6, speed: 280 * 1.8, spiralRadius: 32, spiralOmega: 4.5 },
+            { kind: 'ring', interval: 5 * 0.6, count: 6, speed: 260 * 1.8 },
         ],
-        coeff: 0.7, timerAdd: 16, flipX: true, grounded: false,
+        coeff: 0.7, timerAdd: 16 * 0.7 * 0.6, flipX: true, grounded: false,
     },
     // 12 涡流蜻蜓：慢速右移（自左侧入场），其余同 11
     {
@@ -220,10 +220,10 @@ const ENEMY_DEFS: EnemyDef[] = [
         behavior: { kind: 'sine', amplitude: 60, frequency: Math.PI * 2 / 2.4 },
         hitPoints: 5, hitbox: DRAGONFLY_HITBOX,
         attacks: [
-            { kind: 'aimed', shot: 'spiral', interval: 5 * 0.6, speed: 280 * 1.8, spiralRadius: 32, spiralOmega: 4.5, firstDelay: 1.5 },
-            { kind: 'ring', interval: 5 * 0.6, count: 6, speed: 260 * 1.8, firstDelay: 1.5 },
+            { kind: 'aimed', shot: 'spiral', interval: 5 * 0.6, speed: 280 * 1.8, spiralRadius: 32, spiralOmega: 4.5 },
+            { kind: 'ring', interval: 5 * 0.6, count: 6, speed: 260 * 1.8 },
         ],
-        coeff: 0.7, timerAdd: 16, flipX: false, grounded: false,
+        coeff: 0.7, timerAdd: 16 * 0.7 * 0.6, flipX: false, grounded: false,
     },
 ];
 
@@ -268,7 +268,7 @@ function spawnObstacleDef(def: ObstacleDef): void {
     });
 }
 
-// 生成一波敌怪：阵型排布 + 攻击变体抽取（首发延迟逐体抖动）
+// 生成一波敌怪：阵型排布 + 攻击变体抽取，入场即开火
 function spawnEnemyWave(def: EnemyDef): void {
     const { count, kind, spacing } = def.formation;
     const rowY = ENEMY_ROW_Y_MIN + Math.random() * (ENEMY_ROW_Y_MAX - ENEMY_ROW_Y_MIN);
@@ -294,9 +294,7 @@ function spawnEnemyWave(def: EnemyDef): void {
             hitbox: def.hitbox,
             sprite: def.sprite,
             colorReward: KILL_COLOR_REWARD,
-            attack: baseAttack
-                ? { ...baseAttack, firstDelay: (baseAttack.firstDelay ?? 1.5) + 0.3 + Math.random() * 1.2 }
-                : undefined,
+            attack: baseAttack ?? undefined,
             flipX: def.flipX,
             phase: Math.random() * Math.PI * 2,
         });

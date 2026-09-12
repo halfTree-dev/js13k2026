@@ -27,7 +27,6 @@ interface ShotParams {
     turnRate?: number;
     spiralRadius?: number;
     spiralOmega?: number;
-    firstDelay?: number;
 }
 
 // 攻击类型
@@ -117,7 +116,6 @@ class EntityManager {
 
     // 使用配置生成敌怪
     spawn(config: EntityConfig): void {
-        const firstDelay = config.attack && 'firstDelay' in config.attack ? config.attack.firstDelay : undefined;
         this.entityList.push({
             x: config.x,
             y: config.y,
@@ -129,9 +127,8 @@ class EntityManager {
             sprite: config.sprite ?? null,
             behavior: config.behavior,
             attack: config.attack ?? null,
-            attackTimer: config.attack
-                ? config.attack.interval - (firstDelay ?? config.attack.interval)
-                : 0,
+            // 发射计时器预填充为发射间隔：生成后首个更新帧即发射
+            attackTimer: config.attack ? config.attack.interval : 0,
             lifetime: config.lifetime ?? 0,
             age: 0,
             hitPoints: config.hitPoints ?? 1,
