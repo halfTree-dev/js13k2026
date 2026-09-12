@@ -5,6 +5,7 @@ import { player, PLAYER_HITBOX_OFFSET_X, PLAYER_HITBOX_WIDTH, PLAYER_HITBOX_OFFS
 import { VIEW_WIDTH, VIEW_HEIGHT } from './view';
 import { entityManager } from './entity';
 import { Sprite, drawSprite, PROJECTILE_FRIENDLY, PROJECTILE_ENEMY } from './sprite';
+import { fx } from './fx';
 
 // 弹幕行为标签
 type ProjectileBehavior =
@@ -121,6 +122,8 @@ class ProjectileManager {
                     projectile.dead = true;
                 }
             } else if (this.checkPlayerCollision(projectile)) {
+                // 敌方弹幕命中玩家：白色粒子迸散
+                fx.burst(projectile.x, projectile.y, 5, 300, true);
                 player.damage();
                 projectile.dead = true;
             }
@@ -255,6 +258,8 @@ class ProjectileManager {
             const dy = projectile.y - clampedY;
             if (dx * dx + dy * dy <= projectile.radius * projectile.radius) {
                 entityManager.damage(entity, PROJECTILE_HIT_DAMAGE);
+                // 命中敌怪：黑白粒子迸散
+                fx.burst(projectile.x, projectile.y, 6, 340, false);
                 return true;
             }
         }

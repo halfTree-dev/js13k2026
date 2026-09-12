@@ -108,10 +108,12 @@ export type { CaptionConfig };
 class ScreenFlash {
     private timer: number = 0;
     private duration: number = 0;
+    private color: string = '#ffffff';
 
-    trigger(duration: number = 0.35): void {
+    trigger(duration: number = 0.35, color: string = '#ffffff'): void {
         this.duration = duration;
         this.timer = duration;
+        this.color = color;
     }
 
     update(elapsedTime: number): void {
@@ -124,7 +126,7 @@ class ScreenFlash {
         }
         context.save();
         context.globalAlpha = this.timer / this.duration;
-        context.fillStyle = '#ffffff';
+        context.fillStyle = this.color;
         context.fillRect(0, 0, VIEW_WIDTH, VIEW_HEIGHT);
         context.restore();
     }

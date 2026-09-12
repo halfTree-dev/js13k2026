@@ -5,6 +5,7 @@
 import fs from 'fs';
 import path from 'path';
 import * as esbuild from 'esbuild';
+import { minify } from 'terser';
 import compressing from 'compressing';
 
 const workingRoot = process.cwd();
@@ -29,10 +30,11 @@ function resetDirectory(targetPath: string) {
 
 async function bundleScripts() {
     const outfile = path.join(buildPath, 'main.js');
+    // esbuild 仅做打包转换，由 terser 负责压缩与混淆（二次压缩减小体积）
     const result = await esbuild.build({
         entryPoints: [entryPath],
         bundle: true,
-        minify: true,
+        minify: false,
         format: 'iife',
         target: 'es2022',
         outfile,
@@ -43,6 +45,16 @@ async function bundleScripts() {
         for (const warning of result.warnings) {
             console.warn(`esbuild 警告: ${warning.text}`);
         }
+    }
+
+    const bundled = fs.readFileSync(outfile, 'utf8');
+    const terserResult = await minify(bundled, {
+        compress: { passes: 2 },
+        mangle: true,
+        format: { comments: false },
+    });
+    if (terserResult.code) {
+        fs.writeFileSync(outfile, terserResult.code);
     }
 
     console.info(`已编译 main.js (${fs.statSync(outfile).size} 字节): ${outfile}`);

@@ -5,6 +5,7 @@ import { player, PLAYER_HITBOX_OFFSET_X, PLAYER_HITBOX_WIDTH, PLAYER_HITBOX_OFFS
 import { VIEW_WIDTH, VIEW_HEIGHT } from './view';
 import { projectileManager, ProjectileBehavior } from './projectile';
 import { Sprite, drawSprite } from './sprite';
+import { fx } from './fx';
 
 // 行为标签
 type EntityBehavior =
@@ -154,6 +155,9 @@ class EntityManager {
         entity.hitPoints -= amount;
         if (entity.hitPoints <= 0) {
             entity.dead = true;
+            // 击杀特效：黑白粒子爆发 + 抖屏
+            fx.burst(entity.x, entity.y, 10, 460, false);
+            fx.shakeScreen();
             if (entity.colorReward > 0) {
                 player.addColor(entity.colorReward);
                 player.score++;

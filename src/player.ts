@@ -5,6 +5,8 @@ import { inputManager } from './input';
 import { VIEW_WIDTH, VIEW_HEIGHT } from './view';
 import { drawSprite, UNICORN_RUN_FRAMES, UNICORN_LEAP, UNICORN_SINK } from './sprite';
 import { projectileManager } from './projectile';
+import { fx } from './fx';
+import { screenFlash } from './caption';
 
 // 地面高度
 export const GROUND_Y = 720;
@@ -138,6 +140,8 @@ class Player {
         }
         this.invincibleTimer = PLAYER_INVINCIBLE_TIME;
         this.hitPoint = Math.max(0, this.hitPoint - 1);
+        // 受伤红闪
+        screenFlash.trigger(0.15, '#e04848');
         // 生命值低于 1：主角倒下
         if (this.hitPoint < 1) {
             this.isDown = true;
@@ -208,6 +212,8 @@ class Player {
                 lifetime: 2.5,
             });
             this.shootCooldown = PLAYER_SHOOT_COOLDOWN;
+            // 枪口白色粒子
+            fx.burst(hornX, hornY, 3, 240, true);
         }
     }
 

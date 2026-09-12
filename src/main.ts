@@ -7,6 +7,7 @@ import { entityManager } from './entity';
 import { projectileManager } from './projectile';
 import { inputManager } from './input';
 import { director } from './director';
+import { fx } from './fx';
 import { VIEW_WIDTH, VIEW_HEIGHT } from './view';
 
 const LETTERBOX_COLOR = '#1a1a1a';
@@ -75,6 +76,7 @@ function gameUpdate(elapsedTime: number): void {
         player.update(elapsedTime, director.hudVisible);
         entityManager.update(elapsedTime);
         projectileManager.update(elapsedTime);
+        fx.update(elapsedTime);
     }
     inputManager.endFrame();
 }
@@ -94,6 +96,8 @@ function gameRender(): void {
     context.beginPath();
     context.rect(0, 0, VIEW_WIDTH, VIEW_HEIGHT);
     context.clip();
+    // 抖屏偏移（裁剪后应用，避免露出视口边缘）
+    fx.applyShake(context);
 
     context.fillStyle = skyStatus.color;
     context.fillRect(0, 0, VIEW_WIDTH, VIEW_HEIGHT);
@@ -103,6 +107,7 @@ function gameRender(): void {
     player.render(context);
     entityManager.renderFront(context);
     projectileManager.render(context);
+    fx.render(context);
 
     if (director.hudVisible) {
         player.renderUI(context);
