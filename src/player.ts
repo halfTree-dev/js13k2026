@@ -30,17 +30,17 @@ const PLAYER_ANIM_INTERVAL_FAST = 70e-3;
 const PLAYER_ANIM_INTERVAL_SLOW = 105e-3;
 const PLAYER_ANIM_SPEED_THRESHOLD = 10;
 
-// 玩家碰撞盒偏移与尺寸
-export const PLAYER_HITBOX_OFFSET_X = -30;
-export const PLAYER_HITBOX_WIDTH = 65;
-export const PLAYER_HITBOX_OFFSET_Y = -75;
-export const PLAYER_HITBOX_HEIGHT = 85;
+// 玩家碰撞盒偏移与尺寸（较外观略回缩）
+export const PLAYER_HITBOX_OFFSET_X = -28;
+export const PLAYER_HITBOX_WIDTH = 56;
+export const PLAYER_HITBOX_OFFSET_Y = -66;
+export const PLAYER_HITBOX_HEIGHT = 76;
 
 // 玩家碰撞盒中心相对锚点的纵向偏移
 export const PLAYER_HITBOX_CENTER_Y = PLAYER_HITBOX_OFFSET_Y + PLAYER_HITBOX_HEIGHT / 2;
 
-// 友方弹幕发射冷却
-export const PLAYER_SHOOT_COOLDOWN = 0.25;
+// 友方弹幕发射冷却（原 0.25s × 0.75）
+export const PLAYER_SHOOT_COOLDOWN = 0.1875;
 // 友方弹幕速度
 const FRIENDLY_PROJECTILE_SPEED = 900;
 // 独角兽角尖相对玩家锚点偏移
@@ -50,11 +50,14 @@ const HORN_OFFSET_Y = -77;
 const PLAYER_INVINCIBLE_TIME = 1.0;
 
 // 生命值上限与恒定恢复速率
-const PLAYER_MAX_HIT_POINT = 3;
+const PLAYER_MAX_HIT_POINT = 4;
 const PLAYER_HIT_POINT_REGEN = 0.1;
+// 复活后的短暂免伤时长
+const PLAYER_REVIVE_INVINCIBLE_TIME = 2;
 // 颜色条上限
 const COLOR_POINT_MAX = 1;
 
+// 颜色条默认填充色（关卡内随主题色切换）
 const COLOR_POINT_BAR_COLOR = '#7fb3ec';
 
 // 生命值 UI
@@ -105,6 +108,12 @@ class Player {
     hitPoint : number = PLAYER_MAX_HIT_POINT;
     // 颜色条
     colorPoint : number = 0;
+    // 颜色条填充色（随关卡主题色变化）
+    colorBarColor : string = COLOR_POINT_BAR_COLOR;
+    // 分数（每击杀一名敌怪 +1，死亡减半）
+    score : number = 0;
+    // 倒下标记（生命值低于 1，交由 director 演出死亡序列）
+    isDown : boolean = false;
 
     update(elapsedTime: number, inputEnabled = true) {
         // 计时器
@@ -124,11 +133,23 @@ class Player {
     }
 
     damage(): void {
-        if (this.invulnerable || this.invincibleTimer > 0) {
+        if (this.invulnerable || this.isDown || this.invincibleTimer > 0) {
             return;
         }
         this.invincibleTimer = PLAYER_INVINCIBLE_TIME;
         this.hitPoint = Math.max(0, this.hitPoint - 1);
+        // 生命值低于 1：主角倒下
+        if (this.hitPoint < 1) {
+            this.isDown = true;
+        }
+    }
+
+    // 复活：恢复生命、清空颜色条，并给予短暂免伤（关卡阶段不变由 director 保证）
+    revive(): void {
+        this.hitPoint = PLAYER_MAX_HIT_POINT;
+        this.colorPoint = 0;
+        this.isDown = false;
+        this.invincibleTimer = PLAYER_REVIVE_INVINCIBLE_TIME;
     }
 
     addColor(amount: number): void {
@@ -170,8 +191,8 @@ class Player {
             }
         }
 
-        // 发射友方弹幕（单击单发，朝鼠标方向，受冷却限制防连点）
-        if (inputManager.isMouseLeftPressed() && this.shootCooldown <= 0) {
+        // 发射友方弹幕（按住左键持续发射，朝鼠标方向，冷却限制射速）
+        if (inputManager.isMouseLeftDown() && this.shootCooldown <= 0) {
             const hornX = this.playerX + HORN_OFFSET_X;
             const hornY = this.playerY + HORN_OFFSET_Y;
             const deltaX = inputManager.mouseX - hornX;
@@ -226,8 +247,20 @@ class Player {
 
     // 渲染 UI
     renderUI(context: CanvasRenderingContext2D) {
+        this.renderScoreUI(context);
         this.renderHitPointUI(context);
         this.renderColorPointUI(context);
+    }
+
+    // 分数栏（左上角）
+    private renderScoreUI(context: CanvasRenderingContext2D) {
+        context.save();
+        context.fillStyle = '#fffdf0';
+        context.font = 'bold 26px Consolas, monospace';
+        context.textAlign = 'left';
+        context.textBaseline = 'middle';
+        context.fillText(`SCORE ${this.score}`, UI_MARGIN, UI_MARGIN + 13);
+        context.restore();
     }
 
     // 生命值 UI
@@ -264,11 +297,11 @@ class Player {
             drawParallelogram(context, x, y, COLOR_SEG_WIDTH, COLOR_SEG_HEIGHT, COLOR_SEG_SKEW, UI_SLOT_BACKGROUND);
 
             if (i < fullCount) {
-                drawParallelogram(context, x, y, COLOR_SEG_WIDTH, COLOR_SEG_HEIGHT, COLOR_SEG_SKEW, COLOR_POINT_BAR_COLOR);
+                drawParallelogram(context, x, y, COLOR_SEG_WIDTH, COLOR_SEG_HEIGHT, COLOR_SEG_SKEW, this.colorBarColor);
             } else if (i === fullCount && fraction > 0) {
                 context.save();
                 context.globalAlpha = PARTIAL_SLOT_ALPHA;
-                drawParallelogram(context, x, y, COLOR_SEG_WIDTH * fraction, COLOR_SEG_HEIGHT, COLOR_SEG_SKEW, COLOR_POINT_BAR_COLOR);
+                drawParallelogram(context, x, y, COLOR_SEG_WIDTH * fraction, COLOR_SEG_HEIGHT, COLOR_SEG_SKEW, this.colorBarColor);
                 context.restore();
             }
 

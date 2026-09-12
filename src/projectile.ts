@@ -133,8 +133,10 @@ class ProjectileManager {
     render(context: CanvasRenderingContext2D): void {
         for (const projectile of this.projectiles) {
             const sprite = projectile.sprite ?? (projectile.friendly ? PROJECTILE_FRIENDLY : PROJECTILE_ENEMY);
+            // 敌方射弹视觉 1.5 倍、友方 0.8 倍，碰撞半径均保持不变
+            const scale = projectile.friendly ? 0.8 : 1.5;
             const angle = Math.atan2(projectile.vy, projectile.vx);
-            drawSprite(context, sprite, projectile.x, projectile.y, 1, 1, false, angle);
+            drawSprite(context, sprite, projectile.x, projectile.y, scale, scale, false, angle);
         }
     }
 

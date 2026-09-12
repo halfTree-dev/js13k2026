@@ -2,8 +2,8 @@
 // 管理敌怪和其行为
 
 import { player, PLAYER_HITBOX_OFFSET_X, PLAYER_HITBOX_WIDTH, PLAYER_HITBOX_OFFSET_Y, PLAYER_HITBOX_HEIGHT, PLAYER_HITBOX_CENTER_Y } from './player';
-import { VIEW_WIDTH } from './view';
-import { projectileManager } from './projectile';
+import { VIEW_WIDTH, VIEW_HEIGHT } from './view';
+import { projectileManager, ProjectileBehavior } from './projectile';
 import { Sprite, drawSprite } from './sprite';
 
 // 行为标签
@@ -11,19 +11,33 @@ type EntityBehavior =
     | { kind: 'linear' }
     // y = baseY - amplitude·|sin(phase)|
     | { kind: 'hop'; amplitude: number; frequency: number }
-    // y = baseY + amplitude·sin(phase)
-    | { kind: 'sine'; amplitude: number; frequency: number };
+    // 沿 axis 轴正弦摆动（默认纵轴）
+    | { kind: 'sine'; axis?: 'x' | 'y'; amplitude: number; frequency: number };
+
+// 射弹样式
+type ShotStyle = 'linear' | 'accel' | 'decel' | 'homing' | 'spiral';
+
+// 射弹共享参数
+interface ShotParams {
+    interval: number;
+    speed: number;
+    accel?: number;
+    maxSpeed?: number;
+    minSpeed?: number;
+    turnRate?: number;
+    spiralRadius?: number;
+    spiralOmega?: number;
+    firstDelay?: number;
+}
 
 // 攻击类型
 type EntityAttack =
-    // 加速直线弹（射向发射瞬间的玩家位置并持续加速）
-    | { kind: 'accel'; interval: number; initialSpeed: number; accel: number; maxSpeed: number; firstDelay?: number }
-    // 追踪弹（恒速，持续转向玩家）
-    | { kind: 'homing'; interval: number; speed: number; turnRate: number; firstDelay?: number }
-    // 重力抛物弹（朝玩家方向固定仰角）
-    | { kind: 'lob'; interval: number; speed: number; gravity: number; firstDelay?: number }
+    // 对玩家射弹（发射瞬间瞄准玩家，count>1 时按 spreadDeg 扇形同时发射）
+    | ({ kind: 'aimed'; shot: 'linear' | 'accel' | 'decel' | 'homing' | 'spiral'; count?: number; spreadDeg?: number } & ShotParams)
     // 环形弹幕（count 向均匀分布）
-    | { kind: 'ring'; interval: number; count: number; speed: number };
+    | ({ kind: 'ring'; count: number } & ShotParams)
+    // 重力抛射弹（skyward 取天顶方向随机角，否则全向随机角散射 count 枚）
+    | ({ kind: 'lob'; gravity: number; skyward?: boolean; count?: number } & ShotParams);
 
 // 敌怪实体
 interface Entity {
@@ -95,8 +109,6 @@ interface EntityConfig {
 
 // 出界回收边距
 const ENTITY_DESPAWN_MARGIN = 80;
-// 右侧额外回收余量：容纳成排/宽体生成物入场
-const ENTITY_DESPAWN_RIGHT_EXTRA = 700;
 
 const DEFAULT_HITBOX: EntityHitbox = { offsetX: -15, offsetY: -14, width: 32, height: 20 };
 
@@ -137,7 +149,7 @@ class EntityManager {
         this.entityList.length = 0;
     }
 
-    // 造成损伤，击杀时返还颜色条
+    // 造成损伤，击杀时返还颜色条并计分
     damage(entity: Entity, amount: number): void {
         if (entity.dead) {
             return;
@@ -147,6 +159,7 @@ class EntityManager {
             entity.dead = true;
             if (entity.colorReward > 0) {
                 player.addColor(entity.colorReward);
+                player.score++;
             }
         }
     }
@@ -178,9 +191,11 @@ class EntityManager {
             entity.baseY += entity.vy * elapsedTime;
             this.applyOffset(entity, elapsedTime);
 
-            // 出界回收
-            if (entity.x + entity.hitbox.width < -ENTITY_DESPAWN_MARGIN
-                || entity.x - entity.hitbox.width > VIEW_WIDTH + ENTITY_DESPAWN_MARGIN + ENTITY_DESPAWN_RIGHT_EXTRA) {
+            // 出界回收：按运动方向判定，左移者出左界、右移者出右界、下落者出下界
+            // （不判反向边界，容纳屏外成排/上方纵列入场）
+            if ((entity.vx < 0 && entity.x + entity.hitbox.offsetX + entity.hitbox.width < -ENTITY_DESPAWN_MARGIN)
+                || (entity.vx > 0 && entity.x + entity.hitbox.offsetX > VIEW_WIDTH + ENTITY_DESPAWN_MARGIN)
+                || (entity.vy >= 0 && entity.y + entity.hitbox.offsetY > VIEW_HEIGHT + ENTITY_DESPAWN_MARGIN)) {
                 entity.dead = true;
                 continue;
             }
@@ -216,7 +231,12 @@ class EntityManager {
             case 'sine':
                 entity.phase += entity.behavior.frequency * elapsedTime;
                 entity.x = entity.baseX;
-                entity.y = entity.baseY + entity.behavior.amplitude * Math.sin(entity.phase);
+                entity.y = entity.baseY;
+                if (entity.behavior.axis === 'x') {
+                    entity.x = entity.baseX + entity.behavior.amplitude * Math.sin(entity.phase);
+                } else {
+                    entity.y = entity.baseY + entity.behavior.amplitude * Math.sin(entity.phase);
+                }
                 break;
             default:
                 entity.x = entity.baseX;
@@ -228,61 +248,71 @@ class EntityManager {
     // 依据攻击类型发射敌方弹幕
     private fireAttack(entity: Entity): void {
         const attack = entity.attack!;
-        const targetX = player.playerX;
-        const targetY = player.playerY + PLAYER_HITBOX_CENTER_Y;
 
         if (attack.kind === 'ring') {
             for (let i = 0; i < attack.count; i++) {
                 const angle = (Math.PI * 2 * i) / attack.count;
+                this.spawnShot(entity, 'linear', angle, attack);
+            }
+            return;
+        }
+
+        if (attack.kind === 'lob') {
+            const count = attack.count ?? 1;
+            for (let i = 0; i < count; i++) {
+                // 天顶抛射取上半平面随机角，散射取全向随机角
+                const angle = attack.skyward
+                    ? -Math.PI / 2 + (Math.random() - 0.5) * (Math.PI * 2 / 3)
+                    : Math.random() * Math.PI * 2;
                 projectileManager.spawn({
                     x: entity.x,
                     y: entity.y,
                     vx: Math.cos(angle) * attack.speed,
                     vy: Math.sin(angle) * attack.speed,
-                    behavior: { kind: 'linear' },
+                    behavior: { kind: 'gravity', g: attack.gravity },
                     friendly: false,
                     lifetime: 6,
                 });
             }
             return;
         }
-        if (attack.kind === 'lob') {
-            const directionX = targetX >= entity.x ? 1 : -1;
-            const elevation = 35 * Math.PI / 180;
-            projectileManager.spawn({
-                x: entity.x,
-                y: entity.y,
-                vx: Math.cos(elevation) * attack.speed * directionX,
-                vy: -Math.sin(elevation) * attack.speed,
-                behavior: { kind: 'gravity', g: attack.gravity },
-                friendly: false,
-                lifetime: 6,
-            });
-            return;
-        }
 
-        const angle = Math.atan2(targetY - entity.y, targetX - entity.x);
-        if (attack.kind === 'accel') {
-            projectileManager.spawn({
-                x: entity.x,
-                y: entity.y,
-                vx: Math.cos(angle) * attack.initialSpeed,
-                vy: Math.sin(angle) * attack.initialSpeed,
-                behavior: { kind: 'accelerate', ax: Math.cos(angle) * attack.accel, ay: Math.sin(angle) * attack.accel, maxSpeed: attack.maxSpeed },
-                friendly: false,
-                lifetime: 6,
-            });
-        } else {
-            projectileManager.spawn({
-                x: entity.x,
-                y: entity.y,
-                vx: Math.cos(angle) * attack.speed,
-                vy: Math.sin(angle) * attack.speed,
-                behavior: { kind: 'homing', turnRate: attack.turnRate },
-                friendly: false,
-                lifetime: 6,
-            });
+        const angle = Math.atan2(player.playerY + PLAYER_HITBOX_CENTER_Y - entity.y, player.playerX - entity.x);
+        const count = attack.count ?? 1;
+        const spread = ((attack.spreadDeg ?? 0) * Math.PI) / 180;
+        for (let i = 0; i < count; i++) {
+            this.spawnShot(entity, attack.shot, count > 1 ? angle + (i - (count - 1) / 2) * spread : angle, attack);
         }
+    }
+
+    // 以 angle 方向发射一枚指定样式射弹
+    private spawnShot(entity: Entity, style: ShotStyle, angle: number, params: ShotParams): void {
+        const cos = Math.cos(angle);
+        const sin = Math.sin(angle);
+        let behavior: ProjectileBehavior = { kind: 'linear' };
+        switch (style) {
+            case 'accel':
+                behavior = { kind: 'accelerate', ax: cos * params.accel!, ay: sin * params.accel!, maxSpeed: params.maxSpeed! };
+                break;
+            case 'decel':
+                behavior = { kind: 'decelerate', ax: cos * params.accel!, ay: sin * params.accel!, minSpeed: params.minSpeed! };
+                break;
+            case 'homing':
+                behavior = { kind: 'homing', turnRate: params.turnRate! };
+                break;
+            case 'spiral':
+                behavior = { kind: 'spiral', radius: params.spiralRadius!, angularSpeed: params.spiralOmega! };
+                break;
+        }
+        projectileManager.spawn({
+            x: entity.x,
+            y: entity.y,
+            vx: cos * params.speed,
+            vy: sin * params.speed,
+            behavior,
+            friendly: false,
+            lifetime: 6,
+        });
     }
 
     // 渲染实体

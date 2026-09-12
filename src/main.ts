@@ -69,10 +69,13 @@ function frame(nowTime: number): void {
 
 function gameUpdate(elapsedTime: number): void {
     director.update(elapsedTime);
-    gameLevel.update(elapsedTime);
-    player.update(elapsedTime, director.hudVisible);
-    entityManager.update(elapsedTime);
-    projectileManager.update(elapsedTime);
+    // 死亡序列期间冻结世界
+    if (!director.worldFrozen) {
+        gameLevel.update(elapsedTime);
+        player.update(elapsedTime, director.hudVisible);
+        entityManager.update(elapsedTime);
+        projectileManager.update(elapsedTime);
+    }
     inputManager.endFrame();
 }
 
