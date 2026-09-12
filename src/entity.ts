@@ -1,9 +1,12 @@
+// entity.ts
+// 管理敌怪和其行为
+
 import { player, PLAYER_HITBOX_OFFSET_X, PLAYER_HITBOX_WIDTH, PLAYER_HITBOX_OFFSET_Y, PLAYER_HITBOX_HEIGHT, PLAYER_HITBOX_CENTER_Y } from './player';
 import { VIEW_WIDTH } from './view';
 import { projectileManager } from './projectile';
 import { Sprite, drawSprite } from './sprite';
 
-// 敌怪行为标签
+// 行为标签
 type EntityBehavior =
     | { kind: 'linear' }
     // y = baseY - amplitude·|sin(phase)|
@@ -11,7 +14,7 @@ type EntityBehavior =
     // y = baseY + amplitude·sin(phase)
     | { kind: 'sine'; amplitude: number; frequency: number };
 
-// 攻击组件：计时向玩家发射弹幕，按弹道类型分标签
+// 攻击类型
 type EntityAttack =
     // 加速直线弹（射向发射瞬间的玩家位置并持续加速）
     | { kind: 'accel'; interval: number; initialSpeed: number; accel: number; maxSpeed: number; firstDelay?: number }
@@ -175,7 +178,7 @@ class EntityManager {
             entity.baseY += entity.vy * elapsedTime;
             this.applyOffset(entity, elapsedTime);
 
-            // 出界回收（以碰撞盒边界为准）
+            // 出界回收
             if (entity.x + entity.hitbox.width < -ENTITY_DESPAWN_MARGIN
                 || entity.x - entity.hitbox.width > VIEW_WIDTH + ENTITY_DESPAWN_MARGIN + ENTITY_DESPAWN_RIGHT_EXTRA) {
                 entity.dead = true;
@@ -192,12 +195,12 @@ class EntityManager {
         this.entityList = this.entityList.filter(entity => !entity.dead);
     }
 
-    // 渲染在玩家身后的实体（障碍物层）
+    // 渲染在玩家身后的实体
     renderBack(context: CanvasRenderingContext2D): void {
         this.renderLayer(context, true);
     }
 
-    // 渲染在玩家身前的实体（敌怪层）
+    // 渲染在玩家身前的实体
     renderFront(context: CanvasRenderingContext2D): void {
         this.renderLayer(context, false);
     }
@@ -222,7 +225,7 @@ class EntityManager {
         }
     }
 
-    // 依据攻击类型发射敌方弹幕（目标为玩家当前碰撞盒中心）
+    // 依据攻击类型发射敌方弹幕
     private fireAttack(entity: Entity): void {
         const attack = entity.attack!;
         const targetX = player.playerX;
@@ -282,7 +285,7 @@ class EntityManager {
         }
     }
 
-    // 按层渲染实体，rotate 开启时以锚点按速度方向旋转；无精灵则跳过
+    // 渲染实体
     private renderLayer(context: CanvasRenderingContext2D, background: boolean): void {
         for (const entity of this.entityList) {
             if (entity.background !== background || !entity.sprite) {
@@ -293,7 +296,7 @@ class EntityManager {
         }
     }
 
-    // 敌怪碰撞盒与玩家碰撞盒（AABB）相交测试
+    // 敌怪碰撞盒碰撞判定
     private checkPlayerCollision(entity: Entity): boolean {
         const left = player.playerX + PLAYER_HITBOX_OFFSET_X;
         const top = player.playerY + PLAYER_HITBOX_OFFSET_Y;

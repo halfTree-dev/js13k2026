@@ -17,9 +17,9 @@ type SpawnRule = 'motlingSwarm' | 'droneRow' | 'droneColumn' | 'spider' | 'waspS
 interface StageConfig {
     // 开场文本颜色
     themeColor: string;
-    // 开场文本（逐次浮现）
+    // 开场文本
     introLines: string[];
-    // 完成时恢复的近景色板（紫关 null：前序已全部恢复）
+    // 完成时恢复的近景色板
     restorePalette: string[] | null;
     // 敌怪池（等概率抽取）
     enemyPool: SpawnRule[];

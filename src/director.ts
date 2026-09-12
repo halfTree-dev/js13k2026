@@ -10,27 +10,23 @@ import { captionManager, screenFlash, drawText,
     CAPTION_LEFT_THIRD, CAPTION_RIGHT_THIRD, CAPTION_ABOVE_HP, CAPTION_ABOVE_COLOR } from './caption';
 import { STAGES, StageConfig, SpawnRule, runSpawnRule, pickObstacleDef, spawnObstacleDef, spawnEasyObstacle, spawnTutorialBird } from './stages';
 
-// 游戏状态：stage 为通用关卡状态（stageIndex 区分 6 关），finale 为终局自由奔跑
+// 游戏状态
 type GameState = 'intro' | 'title' | 'tutorial' | 'stage' | 'stageClear' | 'finale';
 
-// ---- intro 时间轴（秒）----
 const INTRO_TEXT1_AT = 0.8;
 const INTRO_FLASH1_AT = 4.0;
 const INTRO_TEXT2_AT = 4.3;
 const INTRO_FLASH2_AT = 7.5;
 
-// ---- 教程各段时长（秒）----
 const TUTORIAL_SEG1 = 5;
 const TUTORIAL_SEG2 = 5;
 const TUTORIAL_SEG3 = 20;
 const TUTORIAL_SEG4 = 20;
 
-// ---- 标题 ----
 const TITLE_PULSE_PERIOD = 1.6;
 
-// ---- 通用关卡节奏 ----
 // 被动颜色增速
-const PASSIVE_COLOR_RATE = 1 / 40;
+const PASSIVE_COLOR_RATE = 1 / 400;
 // 生成循环周期
 const SPAWN_CYCLE = 5;
 // 敌怪轮触发概率（其余为障碍轮）
