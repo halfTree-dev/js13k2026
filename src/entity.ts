@@ -192,6 +192,11 @@ class EntityManager {
             entity.baseY += entity.vy * elapsedTime;
             this.applyOffset(entity, elapsedTime);
 
+            // 环境粒子：敌怪持续冒出当前回收颜色的粒子
+            if (!entity.background && Math.random() < elapsedTime * 6) {
+                fx.emit(entity.x, entity.y, player.colorBarColor);
+            }
+
             // 出界回收：按运动方向判定，左移者出左界、右移者出右界、下落者出下界
             // （不判反向边界，容纳屏外成排/上方纵列入场）
             if ((entity.vx < 0 && entity.x + entity.hitbox.offsetX + entity.hitbox.width < -ENTITY_DESPAWN_MARGIN)

@@ -41,19 +41,19 @@ export const PLAYER_HITBOX_HEIGHT = 76;
 // 玩家碰撞盒中心相对锚点的纵向偏移
 export const PLAYER_HITBOX_CENTER_Y = PLAYER_HITBOX_OFFSET_Y + PLAYER_HITBOX_HEIGHT / 2;
 
-// 友方弹幕发射冷却（0.25s × 0.75 × 0.8）
-export const PLAYER_SHOOT_COOLDOWN = 0.15;
-// 友方弹幕速度（900 × 2.0）
-const FRIENDLY_PROJECTILE_SPEED = 1800;
+// 友方弹幕发射冷却
+export const PLAYER_SHOOT_COOLDOWN = 0.095;
+// 友方弹幕速度
+const FRIENDLY_PROJECTILE_SPEED = 2000;
 // 独角兽角尖相对玩家锚点偏移
 const HORN_OFFSET_X = 40;
 const HORN_OFFSET_Y = -77;
 // 受击无敌时间
 const PLAYER_INVINCIBLE_TIME = 1.0;
 
-// 生命值上限与恒定恢复速率（0.1 × 0.15）
-const PLAYER_MAX_HIT_POINT = 4;
-const PLAYER_HIT_POINT_REGEN = 0.015;
+// 生命值上限与恒定恢复速率
+const PLAYER_MAX_HIT_POINT = 5;
+const PLAYER_HIT_POINT_REGEN = 0.02;
 // 复活后的短暂免伤时长
 const PLAYER_REVIVE_INVINCIBLE_TIME = 2;
 // 颜色条上限

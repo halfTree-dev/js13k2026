@@ -176,6 +176,9 @@ class Director {
 
     private updateIntro(): void {
         const t = this.stateTime;
+        // 启动闪屏：加载完成后立即白色闪光（绘制于黑暗遮罩之上），
+        // 表明游戏已成功加载，规避上传检测将开幕黑屏误判为加载失败
+        this.once('bootFlash', () => screenFlash.trigger(0.4));
         if (t >= INTRO_TEXT1_AT) {
             this.once('text1', () => {
                 captionManager.show({

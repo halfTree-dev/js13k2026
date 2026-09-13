@@ -52,6 +52,9 @@ function screenToView(clientX: number, clientY: number): { x: number; y: number 
     };
 }
 
+// Blank Check 引导标记
+let bootMarkTime = 0.2;
+
 let lastTime = performance.now();
 function frame(nowTime: number): void {
     // 重新适配
@@ -62,7 +65,12 @@ function frame(nowTime: number): void {
     const deltaTime = Math.min(nowTime - lastTime, 100);
     lastTime = nowTime;
 
-    gameUpdate(deltaTime / 1000);
+    const elapsedTime = deltaTime / 1000;
+    if (bootMarkTime > 0) {
+        bootMarkTime -= elapsedTime;
+    }
+
+    gameUpdate(elapsedTime);
     gameRender();
 
     requestAnimationFrame(frame);
@@ -113,6 +121,19 @@ function gameRender(): void {
         player.renderUI(context);
     }
     director.render(context);
+
+    // 该死，为什么要有 Blank Check？
+    if (bootMarkTime > 0) {
+        const centerX = VIEW_WIDTH / 2;
+        const centerY = VIEW_HEIGHT / 2;
+        context.fillStyle = '#888888';
+        context.beginPath();
+        context.moveTo(centerX, centerY - 100);
+        context.lineTo(centerX + 87, centerY + 50);
+        context.lineTo(centerX - 87, centerY + 50);
+        context.closePath();
+        context.fill();
+    }
 
     context.restore();
 }
