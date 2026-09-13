@@ -60,6 +60,9 @@ let bootMarkTime = 0.2;
 // 关卡切换、死亡复活均不清零，死亡冻结期间照常流逝
 let gameTimerSeconds = 0;
 
+// 暂停标记：P 键切换，暂停期间世界与计时器全部冻结
+let paused = false;
+
 let lastTime = performance.now();
 function frame(nowTime: number): void {
     // 重新适配
@@ -74,11 +77,20 @@ function frame(nowTime: number): void {
     if (bootMarkTime > 0) {
         bootMarkTime -= elapsedTime;
     }
-    if (director.hudVisible) {
+    // P 键暂停/恢复（仅游戏正式开始后生效；标题画面的启动按键不会被误判为暂停）
+    if (director.hudVisible && inputManager.isKeyJustPressed('KeyP')) {
+        paused = !paused;
+    }
+    if (director.hudVisible && !paused) {
         gameTimerSeconds += elapsedTime;
     }
 
-    gameUpdate(elapsedTime);
+    if (paused) {
+        // 暂停期间仅消费输入帧，不推进任何游戏逻辑
+        inputManager.endFrame();
+    } else {
+        gameUpdate(elapsedTime);
+    }
     gameRender();
 
     requestAnimationFrame(frame);
@@ -132,6 +144,13 @@ function gameRender(): void {
         drawText(context, `${timerMinutes}:${String(timerSeconds).padStart(2, '0')}`, VIEW_WIDTH / 2, 48, '#fffdf0', 1, 24);
     }
     director.render(context);
+
+    // 暂停遮罩与提示
+    if (paused) {
+        context.fillStyle = 'rgba(8,8,8,0.45)';
+        context.fillRect(0, 0, VIEW_WIDTH, VIEW_HEIGHT);
+        drawText(context, 'PAUSED', VIEW_WIDTH / 2, VIEW_HEIGHT / 2, '#fffdf0', 1, 40);
+    }
 
     // 该死，为什么要有 Blank Check？
     if (bootMarkTime > 0) {

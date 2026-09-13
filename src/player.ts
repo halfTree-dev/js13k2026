@@ -106,6 +106,8 @@ class Player {
     invincibleTimer : number = 0;
     invulnerable : boolean = false;
 
+    // 生命值上限（简单模式下提升至 6）
+    maxHitPoint : number = PLAYER_MAX_HIT_POINT;
     // 生命值
     hitPoint : number = PLAYER_MAX_HIT_POINT;
     // 颜色条
@@ -125,7 +127,7 @@ class Player {
         this.invincibleTimer = Math.max(0, this.invincibleTimer - elapsedTime);
 
         // 生命值恢复
-        this.hitPoint = Math.min(PLAYER_MAX_HIT_POINT, this.hitPoint + PLAYER_HIT_POINT_REGEN * elapsedTime);
+        this.hitPoint = Math.min(this.maxHitPoint, this.hitPoint + PLAYER_HIT_POINT_REGEN * elapsedTime);
 
         this.updateAnimation(elapsedTime);
         if (inputEnabled) {
@@ -157,9 +159,15 @@ class Player {
         }
     }
 
+    // 简单模式：生命上限提升至 6 并立即生效
+    enableEasyMode(): void {
+        this.maxHitPoint = 6;
+        this.hitPoint = 6;
+    }
+
     // 复活：恢复生命、清空颜色条，并给予短暂免伤（关卡阶段不变由 director 保证）
     revive(): void {
-        this.hitPoint = PLAYER_MAX_HIT_POINT;
+        this.hitPoint = this.maxHitPoint;
         this.colorPoint = 0;
         this.isDown = false;
         this.invincibleTimer = PLAYER_REVIVE_INVINCIBLE_TIME;
@@ -287,7 +295,7 @@ class Player {
         const y = VIEW_HEIGHT - UI_MARGIN - HP_SLOT_HEIGHT;
         const fullCount = Math.floor(this.hitPoint);
         const fraction = this.hitPoint - fullCount;
-        for (let i = 0; i < PLAYER_MAX_HIT_POINT; i++) {
+        for (let i = 0; i < this.maxHitPoint; i++) {
             const x = UI_MARGIN + i * (HP_SLOT_WIDTH + HP_SLOT_GAP);
             drawParallelogram(context, x, y, HP_SLOT_WIDTH, HP_SLOT_HEIGHT, HP_SLOT_SKEW, UI_SLOT_BACKGROUND);
 

@@ -61,6 +61,8 @@ class Director {
     private timerEnemy: number = SPAWN_TIMER_INITIAL;
     // 死亡序列计时（-1 表示未激活）
     private defeatTimer: number = -1;
+    // 累计死亡次数（第三次死亡时询问是否开启简单模式）
+    private deathCount: number = 0;
     // 死亡序列期间冻结世界更新
     public worldFrozen: boolean = false;
 
@@ -343,6 +345,11 @@ class Director {
         this.worldFrozen = true;
         screenFlash.trigger(DEFEAT_FLASH_TIME);
         player.score = Math.floor(player.score / 2);
+        // 第三次死亡：询问是否开启简单模式（确认后生命上限提升至 6）
+        this.deathCount++;
+        if (this.deathCount === 3 && confirm('Active easy mode?')) {
+            player.enableEasyMode();
+        }
     }
 
     // 死亡序列：变黑 → 清场归位 → 浮字 → 白光复活（关卡阶段不变）

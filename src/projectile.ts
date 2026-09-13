@@ -244,10 +244,10 @@ class ProjectileManager {
         return dx * dx + dy * dy <= projectile.radius * projectile.radius;
     }
 
-    // 友方弹幕与敌怪碰撞盒（圆与矩形）判定，命中对敌怪造成伤害
+    // 友方弹幕与敌怪碰撞盒（圆与矩形）判定，命中对敌怪造成伤害；障碍物（background）不阻挡弹幕，直接穿过
     private checkEntityCollision(projectile: Projectile): boolean {
         for (const entity of entityManager.entityList) {
-            if (entity.dead) {
+            if (entity.dead || entity.background) {
                 continue;
             }
             const left = entity.x + entity.hitbox.offsetX;

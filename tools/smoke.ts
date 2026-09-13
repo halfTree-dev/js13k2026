@@ -53,8 +53,8 @@ async function main(): Promise<void> {
     const { entityManager } = await import('../src/entity');
     const { projectileManager } = await import('../src/projectile');
     const { inputManager } = await import('../src/input');
-    const { skyStatus } = await import('../src/level');
-    const { STAGES, ENEMY_DEFS, spawnEnemyWave } = await import('../src/stages');
+    const { skyStatus, gameLevel } = await import('../src/level');
+    const { STAGES, ENEMY_DEFS, OBSTACLE_DEFS, spawnObstacleDef, spawnEnemyWave } = await import('../src/stages');
 
     // 生成计数钩子
     const spawnCounts = { background: 0, front: 0, friendlyShots: 0 };
@@ -147,6 +147,17 @@ async function main(): Promise<void> {
     assert(enemy !== undefined && enemy.hitPoints === 3, `敌怪 HitPoints 在定版基础上 +1（实际 ${enemy?.hitPoints}）`);
     assert(entityManager.entityList.length < 60, `实体列表无泄漏（当前 ${entityManager.entityList.length}）`);
 
+    // 7.5 P 键暂停与恢复：暂停期间世界完全冻结
+    const scrollBeforePause = gameLevel.worldScroll;
+    inputManager.pressedCodes.add('KeyP');
+    step(1 / 60);
+    step(1);
+    assert(gameLevel.worldScroll === scrollBeforePause, `按 P 后世界冻结（滚动 ${scrollBeforePause} -> ${gameLevel.worldScroll}）`);
+    inputManager.pressedCodes.add('KeyP');
+    step(1 / 60);
+    step(0.5);
+    assert(gameLevel.worldScroll > scrollBeforePause, '再次按 P 恢复运行');
+
     // 8. 死亡与复活：生命低于 1 触发，阶段不变、分数减半、生命回满、颜色条清空
     player.invulnerable = false;
     player.invincibleTimer = 0;
@@ -163,6 +174,36 @@ async function main(): Promise<void> {
     assert(player.hitPoint === 3, `复活后生命值回满（上限 3，实际 ${player.hitPoint}）`);
     assert(player.score === 5, `死亡后分数减半（实际 ${player.score}）`);
     assert(player.colorPoint === 0, '复活后颜色条清空');
+
+    // 8.5 友方弹幕穿过障碍物：不被阻挡、不削减障碍耐久
+    entityManager.clear();
+    spawnObstacleDef(OBSTACLE_DEFS[0]);
+    const blockingPole = entityManager.entityList[0];
+    blockingPole.x = 640;
+    blockingPole.baseX = 640;
+    projectileManager.spawn({ x: 640, y: 700, vx: 600, vy: 0, behavior: { kind: 'linear' }, friendly: true, lifetime: 2 });
+    step(0.1);
+    const aliveShots = (projectileManager as unknown as { projectiles: unknown[] }).projectiles.length;
+    assert(aliveShots === 1 && blockingPole.hitPoints === 999, `友方弹幕穿过障碍物（存活 ${aliveShots}，障碍耐久 ${blockingPole.hitPoints}）`);
+    entityManager.clear();
+    projectileManager.clear();
+
+    // 8.7 第三次死亡触发简单模式询问（桩替 confirm 为同意），前两次死亡不询问
+    let confirmCalls = 0;
+    (globalThis as AnyRecord).confirm = () => {
+        confirmCalls++;
+        return true;
+    };
+    for (let i = 0; i < 2; i++) {
+        player.invulnerable = false;
+        player.invincibleTimer = 0;
+        player.isDown = false;
+        player.hitPoint = 0.5;
+        player.damage();
+        step(4.5);
+    }
+    assert(confirmCalls === 1, `仅第三次死亡时询问简单模式（实际询问 ${confirmCalls} 次）`);
+    assert(player.maxHitPoint === 6 && player.hitPoint === 6, `确认后进入简单模式（上限 ${player.maxHitPoint}，当前 ${player.hitPoint}）`);
 
     // 9. 逐关推进直至终局（期间免伤保证时序确定）
     player.invulnerable = true;
