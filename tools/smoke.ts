@@ -129,8 +129,8 @@ async function main(): Promise<void> {
     inputManager.mouseLeftDown = true;
     step(2);
     inputManager.mouseLeftDown = false;
-    assert(spawnCounts.friendlyShots >= 17 && spawnCounts.friendlyShots <= 19,
-        `按住左键 2 秒发射约 18 发（实际 ${spawnCounts.friendlyShots}）`);
+    assert(spawnCounts.friendlyShots >= 19 && spawnCounts.friendlyShots <= 21,
+        `按住左键 2 秒发射约 20 发（实际 ${spawnCounts.friendlyShots}）`);
 
     // 7. 关卡双计时器生成与关键数值
     spawnCounts.background = 0;

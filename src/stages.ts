@@ -34,7 +34,7 @@ const STAGES: StageConfig[] = [
 ];
 
 // 击杀颜色奖励（统一 1/55 颜色条）
-const KILL_COLOR_REWARD = 1 / 55;
+const KILL_COLOR_REWARD = 1 / 65;
 
 // 障碍物生命值（不可被弹幕击破）
 const OBSTACLE_HIT_POINT = 999;
@@ -170,7 +170,7 @@ const ENEMY_DEFS: EnemyDef[] = [
     {
         sprite: ENEMY_WASP, formation: row(5, 90), vx: -240 * 2.2, vy: 0,
         behavior: LINEAR,
-        hitPoints: 2, hitbox: WASP_HITBOX,
+        hitPoints: 3, hitbox: WASP_HITBOX,
         attacks: [
             { kind: 'aimed', shot: 'linear', interval: 4 * 0.6, speed: 380 * 1.8 },
             { kind: 'aimed', shot: 'homing', interval: 4 * 0.6, speed: 300 * 1.8, turnRate: 2.2 * 0.25 },
@@ -186,7 +186,7 @@ const ENEMY_DEFS: EnemyDef[] = [
             { kind: 'aimed', shot: 'linear', interval: 4 * 0.6, speed: 380 * 1.8 },
             { kind: 'aimed', shot: 'homing', interval: 4 * 0.6, speed: 300 * 1.8, turnRate: 2.2 * 0.25 },
         ],
-        coeff: 0.5, timerAdd: 10 * 0.7 * 0.6,
+        coeff: 0.4, timerAdd: 10 * 0.7 * 0.6,
     },
     // 9 胡蜂横排：左移 + 纵向正弦，对玩家三枚加速弹/追踪弹
     {
@@ -197,7 +197,7 @@ const ENEMY_DEFS: EnemyDef[] = [
             { kind: 'aimed', shot: 'accel', count: 3, spreadDeg: 24, interval: 4 * 0.6, speed: 240 * 1.8, accel: 450, maxSpeed: 660 * 1.8 },
             { kind: 'aimed', shot: 'homing', interval: 4 * 0.6, speed: 300 * 1.8, turnRate: 2.2 * 0.25 },
         ],
-        coeff: 0.5, timerAdd: 10 * 0.7 * 0.6, flipX: true,
+        coeff: 0.4, timerAdd: 10 * 0.7 * 0.6, flipX: true,
     },
     // 10 喷吐花：扎根地面随世界滚动，向天空随机角抛射重力弹
     {
@@ -216,7 +216,7 @@ const ENEMY_DEFS: EnemyDef[] = [
             { kind: 'aimed', shot: 'spiral', interval: 5 * 0.6, speed: 280 * 1.8, spiralRadius: 32, spiralOmega: 4.5 },
             { kind: 'ring', interval: 5 * 0.6, count: 6, speed: 260 * 1.8 },
         ],
-        coeff: 0.7, timerAdd: 16 * 0.7 * 0.6, flipX: true,
+        coeff: 0.5, timerAdd: 16 * 0.7 * 0.6, flipX: true,
     },
     // 12 涡流蜻蜓：慢速右移（自左侧入场），其余同 11
     {
@@ -227,7 +227,7 @@ const ENEMY_DEFS: EnemyDef[] = [
             { kind: 'aimed', shot: 'spiral', interval: 5 * 0.6, speed: 280 * 1.8, spiralRadius: 32, spiralOmega: 4.5 },
             { kind: 'ring', interval: 5 * 0.6, count: 6, speed: 260 * 1.8 },
         ],
-        coeff: 0.7, timerAdd: 16 * 0.7 * 0.6,
+        coeff: 0.5, timerAdd: 16 * 0.7 * 0.6,
     },
 ];
 

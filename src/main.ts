@@ -8,6 +8,7 @@ import { projectileManager } from './projectile';
 import { inputManager } from './input';
 import { director } from './director';
 import { fx } from './fx';
+import { drawText } from './caption';
 import { VIEW_WIDTH, VIEW_HEIGHT } from './view';
 
 const LETTERBOX_COLOR = '#1a1a1a';
@@ -55,6 +56,10 @@ function screenToView(clientX: number, clientY: number): { x: number; y: number 
 // Blank Check 引导标记
 let bootMarkTime = 0.2;
 
+// 游戏计时器（秒）：自正式开始（标题画面首次输入）起累计，
+// 关卡切换、死亡复活均不清零，死亡冻结期间照常流逝
+let gameTimerSeconds = 0;
+
 let lastTime = performance.now();
 function frame(nowTime: number): void {
     // 重新适配
@@ -68,6 +73,9 @@ function frame(nowTime: number): void {
     const elapsedTime = deltaTime / 1000;
     if (bootMarkTime > 0) {
         bootMarkTime -= elapsedTime;
+    }
+    if (director.hudVisible) {
+        gameTimerSeconds += elapsedTime;
     }
 
     gameUpdate(elapsedTime);
@@ -119,6 +127,9 @@ function gameRender(): void {
 
     if (director.hudVisible) {
         player.renderUI(context);
+        const timerMinutes = Math.floor(gameTimerSeconds / 60);
+        const timerSeconds = Math.floor(gameTimerSeconds % 60);
+        drawText(context, `${timerMinutes}:${String(timerSeconds).padStart(2, '0')}`, VIEW_WIDTH / 2, 48, '#fffdf0', 1, 24);
     }
     director.render(context);
 
