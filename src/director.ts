@@ -8,7 +8,7 @@ import { skyStatus } from './level';
 import { captionManager, screenFlash, drawText,
     CAPTION_TOP_CENTER, CAPTION_MID_TOP, CAPTION_MID_BOTTOM,
     CAPTION_LEFT_THIRD, CAPTION_RIGHT_THIRD, CAPTION_ABOVE_HP, CAPTION_ABOVE_COLOR } from './caption';
-import { STAGES, rollObstacle, rollEnemy, spawnObstacleDef, spawnEnemyWave, spawnTutorialPole, spawnTutorialMoth } from './stages';
+import { STAGES, rollObstacle, rollEnemy, spawnObstacleDef, spawnEnemyWave, spawnTutorialPole, spawnTutorialMoth, STAGE_TIMER_COEFF } from './stages';
 
 // 游戏状态
 type GameState = 'intro' | 'title' | 'tutorial' | 'stage' | 'stageClear' | 'finale';
@@ -228,6 +228,7 @@ class Director {
         // 段1：键位提示
         this.once('seg1', () => {
             captionManager.show({ text: '[KeyW] to jump', ...CAPTION_MID_TOP, hold: 4 });
+            captionManager.show({ text: 'You can double jump', x: 640, y: 296, hold: 4 });
             captionManager.show({ text: '[KeyS] to accelerate falling', ...CAPTION_MID_BOTTOM, hold: 4 });
             captionManager.show({ text: '[KeyA] to move left', ...CAPTION_LEFT_THIRD, hold: 4 });
             captionManager.show({ text: '[KeyD] to move right', ...CAPTION_RIGHT_THIRD, hold: 4 });
@@ -310,20 +311,21 @@ class Director {
             this.timerObstacle += def.timerAdd;
         }
 
-        // 敌怪生成倒计时：归零时按难度抽取并生成敌怪波，随后累加其定时时长
+        // 敌怪生成倒计时：归零时按难度抽取并生成敌怪波，随后累加其定时时长（按阶段系数缩短）
         this.timerEnemy -= elapsedTime;
         while (this.timerEnemy <= 0) {
             const def = rollEnemy(config.enemyMean);
-            spawnEnemyWave(def);
-            this.timerEnemy += def.timerAdd;
+            spawnEnemyWave(def, this.stageIndex);
+            this.timerEnemy += def.timerAdd * STAGE_TIMER_COEFF[this.stageIndex];
         }
 
-        // 颜色条集满：闪光、清场、恢复近景颜色，进入下一阶段
+        // 颜色条集满：闪光、清场、恢复近景颜色，收回的颜色化作鬓毛，进入下一阶段
         if (player.colorPoint >= 1) {
             screenFlash.trigger(0.5);
             entityManager.clear();
             projectileManager.clear();
             captionManager.clear();
+            player.maneColors.push(config.themeColor);
             if (config.restorePalette) {
                 restorePropPalette(config.restorePalette);
             }
@@ -343,10 +345,17 @@ class Director {
         player.score = Math.floor(player.score / 2);
     }
 
-    // 死亡序列：变黑 → 浮字 → 白光复活（关卡阶段不变）
+    // 死亡序列：变黑 → 清场归位 → 浮字 → 白光复活（关卡阶段不变）
     private updateDefeat(elapsedTime: number): void {
         this.defeatTimer += elapsedTime;
         const t = this.defeatTimer;
+        if (t >= DEFEAT_BLACK_AT) {
+            // 黑屏后清除场上敌怪与障碍，独角兽归位屏幕中央
+            this.once('defeatClear', () => {
+                entityManager.clear();
+                player.playerX = VIEW_WIDTH / 2;
+            });
+        }
         if (t >= DEFEAT_TEXT_AT) {
             this.once('defeatText', () => {
                 captionManager.show({
@@ -367,6 +376,7 @@ class Director {
             this.defeatTimer = -1;
             this.worldFrozen = false;
             // 仅清除死亡序列标记，保留关卡内已触发的一次性标记
+            this.firedKeys.delete('defeatClear');
             this.firedKeys.delete('defeatText');
             this.firedKeys.delete('defeatRevive');
         }

@@ -33,15 +33,18 @@ const STAGES: StageConfig[] = [
     { themeColor: '#c9a0ff', introLines: ['I took colors', 'To stop the pain', 'You want it back?'], restorePalette: null, obstacleMean: 0.5, enemyMean: 0.4 },
 ];
 
-// 击杀颜色奖励（统一 1/55 颜色条）
-const KILL_COLOR_REWARD = 1 / 65;
+// 各阶段击杀颜色奖励（红/橙/黄/绿/蓝/紫），后期单只敌怪返还递减
+const KILL_REWARDS = [1 / 50, 1 / 60, 1 / 70, 1 / 80, 1 / 105, 1 / 120];
+
+// 各阶段敌怪定时器加时系数（红/橙/黄/绿/蓝/紫），后期敌怪生成加速
+const STAGE_TIMER_COEFF = [1, 0.9, 0.82, 0.77, 0.72, 0.65];
 
 // 障碍物生命值（不可被弹幕击破）
 const OBSTACLE_HIT_POINT = 999;
 
 // 水平移动型敌怪生成高度带
 const ENEMY_ROW_Y_MIN = 100;
-const ENEMY_ROW_Y_MAX = 550;
+const ENEMY_ROW_Y_MAX = 400;
 // 垂直移动型敌怪生成横坐标带
 const ENEMY_COL_X_MIN = 200;
 const ENEMY_COL_X_MAX = 1080;
@@ -272,8 +275,8 @@ function spawnObstacleDef(def: ObstacleDef): void {
     });
 }
 
-// 生成一波敌怪：阵型排布 + 攻击变体抽取，入场即开火
-function spawnEnemyWave(def: EnemyDef): void {
+// 生成一波敌怪：阵型排布 + 攻击变体抽取，入场即开火（击杀奖励随关卡阶段取值）
+function spawnEnemyWave(def: EnemyDef, stageIndex: number): void {
     const { count, kind, spacing } = def.formation;
     const rowY = ENEMY_ROW_Y_MIN + Math.random() * (ENEMY_ROW_Y_MAX - ENEMY_ROW_Y_MIN);
     const colX = ENEMY_COL_X_MIN + Math.random() * (ENEMY_COL_X_MAX - ENEMY_COL_X_MIN);
@@ -297,7 +300,7 @@ function spawnEnemyWave(def: EnemyDef): void {
             hitPoints: def.hitPoints,
             hitbox: def.hitbox,
             sprite: def.sprite,
-            colorReward: KILL_COLOR_REWARD,
+            colorReward: KILL_REWARDS[stageIndex],
             attack: baseAttack ?? undefined,
             flipX: def.flipX,
             phase: Math.random() * Math.PI * 2,
@@ -327,5 +330,5 @@ function spawnTutorialMoth(): void {
     });
 }
 
-export { STAGES, ENEMY_DEFS, OBSTACLE_DEFS, rollObstacle, rollEnemy, spawnObstacleDef, spawnEnemyWave, spawnTutorialPole, spawnTutorialMoth };
+export { STAGES, ENEMY_DEFS, OBSTACLE_DEFS, rollObstacle, rollEnemy, spawnObstacleDef, spawnEnemyWave, spawnTutorialPole, spawnTutorialMoth, STAGE_TIMER_COEFF };
 export type { StageConfig, ObstacleDef, EnemyDef };

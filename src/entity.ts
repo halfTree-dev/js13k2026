@@ -192,8 +192,8 @@ class EntityManager {
             entity.baseY += entity.vy * elapsedTime;
             this.applyOffset(entity, elapsedTime);
 
-            // 环境粒子：敌怪持续冒出当前回收颜色的粒子
-            if (!entity.background && Math.random() < elapsedTime * 6) {
+            // 环境粒子：敌怪持续冒出当前回收颜色的粒子（密集发射）
+            if (!entity.background && Math.random() < elapsedTime * 14) {
                 fx.emit(entity.x, entity.y, player.colorBarColor);
             }
 

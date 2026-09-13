@@ -141,9 +141,9 @@ async function main(): Promise<void> {
     const obstacle = entityManager.entityList.find(entity => entity.background);
     assert(obstacle !== undefined && obstacle.hitPoints === 999, '障碍生命值为 999（不可击破）');
     // 敌怪提速后在场时间短，直接生成一波 0 号敌怪，取队尾实体做数值断言
-    spawnEnemyWave(ENEMY_DEFS[0]);
+    spawnEnemyWave(ENEMY_DEFS[0], 0);
     const enemy = entityManager.entityList[entityManager.entityList.length - 1];
-    assert(enemy !== undefined && !enemy.background && Math.abs(enemy.colorReward - 1 / 55) < 1e-9, '敌怪击杀奖励为 1/55');
+    assert(enemy !== undefined && !enemy.background && Math.abs(enemy.colorReward - 1 / 50) < 1e-9, '敌怪击杀奖励随阶段取值（红关 1/50）');
     assert(enemy !== undefined && enemy.hitPoints === 3, `敌怪 HitPoints 在定版基础上 +1（实际 ${enemy?.hitPoints}）`);
     assert(entityManager.entityList.length < 60, `实体列表无泄漏（当前 ${entityManager.entityList.length}）`);
 
@@ -155,9 +155,12 @@ async function main(): Promise<void> {
     player.score = 10;
     player.damage();
     assert(player.isDown, '生命值低于 1 时主角倒下');
-    step(5);
+    step(0.5);
+    assert(entityManager.entityList.length === 0, `黑屏后清除场上敌怪与障碍（残留 ${entityManager.entityList.length}）`);
+    assert(player.playerX === 640, `黑屏后独角兽横坐标重置至 640（实际 ${player.playerX}）`);
+    step(4.5);
     assert(!player.isDown && director.state === 'stage' && director.stageIndex === 0, '复活后关卡阶段不变');
-    assert(player.hitPoint === 4, `复活后生命值回满（上限 4，实际 ${player.hitPoint}）`);
+    assert(player.hitPoint === 3, `复活后生命值回满（上限 3，实际 ${player.hitPoint}）`);
     assert(player.score === 5, `死亡后分数减半（实际 ${player.score}）`);
     assert(player.colorPoint === 0, '复活后颜色条清空');
 
@@ -182,14 +185,14 @@ async function main(): Promise<void> {
 
     // 10. 终局免伤状态下逐类直接生成 13 类敌怪，验证特殊入场与出界回收
     // 12 号右移蜻蜓自左侧入场，3 号纵列自上方入场
-    spawnEnemyWave(ENEMY_DEFS[12]);
+    spawnEnemyWave(ENEMY_DEFS[12], 0);
     step(0.2);
     assert(entityManager.entityList.some(entity => entity.vx > 0), '12 号敌怪自左侧入场向右移动');
-    spawnEnemyWave(ENEMY_DEFS[3]);
+    spawnEnemyWave(ENEMY_DEFS[3], 0);
     step(0.2);
     assert(entityManager.entityList.some(entity => entity.vy > 0 && entity.y < 0), '3 号敌怪纵列自屏幕上方入场');
     for (const def of ENEMY_DEFS) {
-        spawnEnemyWave(def);
+        spawnEnemyWave(def, 0);
     }
     step(40);
     assert(entityManager.entityList.length === 0, `全部 13 类敌怪均可出界回收（残留 ${entityManager.entityList.length}）`);

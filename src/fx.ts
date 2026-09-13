@@ -35,12 +35,20 @@ class Fx {
         }
     }
 
-    // 环境粒子：单枚自定义颜色，自敌怪躯体向上轻飘
+    // 环境粒子：单枚自定义颜色，自敌怪躯体向上轻飘（大尺寸）
     emit(x: number, y: number, c: string): void {
-        if (this.particles.length > 150) {
+        if (this.particles.length > 240) {
             return;
         }
-        this.particles.push({ x: x + (Math.random() - 0.5) * 16, y: y + (Math.random() - 0.5) * 16, vx: (Math.random() - 0.5) * 30, vy: -40 - Math.random() * 40, t: 0, d: 0.4 + Math.random() * 0.3, s: 2 + Math.random() * 3, c });
+        this.particles.push({ x: x + (Math.random() - 0.5) * 22, y: y + (Math.random() - 0.5) * 22, vx: (Math.random() - 0.5) * 30, vy: -40 - Math.random() * 40, t: 0, d: 0.4 + Math.random() * 0.3, s: 4 + Math.random() * 4, c });
+    }
+
+    // 鬓毛粒子：单枚自定义颜色，自独角兽颈背部向左飘飞
+    mane(x: number, y: number, c: string): void {
+        if (this.particles.length > 240) {
+            return;
+        }
+        this.particles.push({ x: x + (Math.random() - 0.5) * 12, y: y + (Math.random() - 0.5) * 18, vx: -80 - Math.random() * 60, vy: -10 - Math.random() * 30, t: 0, d: 0.5 + Math.random() * 0.3, s: 3 + Math.random() * 4, c });
     }
 
     // 触发抖屏

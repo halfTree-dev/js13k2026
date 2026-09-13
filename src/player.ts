@@ -52,8 +52,8 @@ const HORN_OFFSET_Y = -77;
 const PLAYER_INVINCIBLE_TIME = 1.0;
 
 // 生命值上限与恒定恢复速率
-const PLAYER_MAX_HIT_POINT = 5;
-const PLAYER_HIT_POINT_REGEN = 0.02;
+const PLAYER_MAX_HIT_POINT = 3;
+const PLAYER_HIT_POINT_REGEN = 0.04;
 // 复活后的短暂免伤时长
 const PLAYER_REVIVE_INVINCIBLE_TIME = 2;
 // 颜色条上限
@@ -116,6 +116,8 @@ class Player {
     score : number = 0;
     // 倒下标记（生命值低于 1，交由 director 演出死亡序列）
     isDown : boolean = false;
+    // 已收回颜色（过关时收集），用于鬓毛粒子特效
+    maneColors : string[] = [];
 
     update(elapsedTime: number, inputEnabled = true) {
         // 计时器
@@ -132,6 +134,13 @@ class Player {
             this.playerVelocityX = 0;
         }
         this.updatePhysics(elapsedTime);
+
+        // 鬓毛粒子：每种已收回颜色在颈背部持续生成向左飘飞的同色粒子
+        for (const c of this.maneColors) {
+            if (Math.random() < elapsedTime * 9) {
+                fx.mane(this.playerX + 20, this.playerY - 52, c);
+            }
+        }
     }
 
     damage(): void {
@@ -241,6 +250,10 @@ class Player {
     }
 
     render(context: CanvasRenderingContext2D) {
+        // 无敌期间以约 6Hz 闪烁隐身（倒下时保持可见）
+        if (this.invincibleTimer > 0 && !this.isDown && Math.floor(this.invincibleTimer * 12) % 2 === 0) {
+            return;
+        }
         // 玩家动画
         if (this.playerY >= GROUND_Y - 1) {
             drawSprite(context, UNICORN_RUN_FRAMES[this.playerAnimationIndex], this.playerX, this.playerY, 1);
