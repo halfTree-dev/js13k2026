@@ -3,13 +3,13 @@
 ---
 
 # Prelude
-It wasn't until she woke from a piercing cold that she realized everything around him had lost its color.
+She woke to a piercing cold — and found the world drained of its color.
 
-The sky was gray, the streets covered in black, and strange creatures were fluttering through the air.
+The sky was gray. The streets lay black. Strange creatures drifted through the air.
 
-Her gut told herself that these monsters had stolen the world's colors. She started running toward the group of monsters.
+Her gut told her that these monsters had stolen the world's colors. She started running toward the group of monsters.
 
-She gave it his all to reclaim the colors for the city. But a strange voice echoed in his mind, trying to stop him.
+She fought with everything she had to bring color back to the city. Yet a strange voice echoed in her mind, whispering for her to stop.
 
 She didn’t think any further, because all she wanted was to see the rainbow rise again.
 
