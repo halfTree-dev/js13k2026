@@ -23,3 +23,9 @@ She didn’t think any further, because all she wanted was to see the rainbow ri
 `Left Mouse` to shoot.
 
 `P`  to pause.
+
+# Wavedash Challenge
+
+This game participates in Wavedash challenge: https://wavedash.com/games/colorless-city/leaderboards
+
+Play Colorless city on Wavedash with leaderboards!
